@@ -1,6 +1,7 @@
 from ctypes import sizeof
 import imp
-from turtle import forward
+from posixpath import split
+from turtle import forward, width
 import torch
 from torch.nn import Module
 from torch.nn.modules.transformer import TransformerEncoder, TransformerEncoderLayer
@@ -17,6 +18,7 @@ class ViT(Module):
     d_model,
     d_emb,
     img_size,
+    split_grid,
     nhead, 
     num_layer,
     dim_feedforward=2048, 
@@ -27,7 +29,8 @@ class ViT(Module):
 
         :param d_model: model dimension
         :param d_emb: the dimension of image flatten
-        :param img_size: a tuple showing the size of image, (length, width, channel)
+        :param img_size: a tuple showing the size of image, (row, col, channel)
+        :param split_grid: (row, col)
         :param nhead: the head number of multi-head attention
         :param num_layer: the number of transformer encodeer
         :param dim_feedforward: the dimension of the feedforward network model, defaults to 2048
@@ -38,6 +41,12 @@ class ViT(Module):
         """
         super().__init__()
 
+        #check if the image could be split properly
+        assert img_size[0] % split_grid[0] == 0, "the row of img shoud be divisible by the split row"
+        assert img_size[1] % split_grid[1] == 0, "the column of img should be divisible by teh split column"
+
+        self.img_size = img_size
+        self.split = split_grid        
         self.d_emb = d_emb
 
         active_funcs = {
@@ -58,7 +67,7 @@ class ViT(Module):
             raise ValueError("The img_size must be a 3 dimension tuple, current value={}".format(img_size))
 
         self.activation_func1 = active_funcs[activation]
-        self.fc1 = nn.Linear(np.prod(img_size), d_emb)
+        self.fc1 = nn.Linear(np.prod([img_size[0]//self.split[0], img_size[1]//self.split[1], img_size[2]]), d_emb)
         self.dropout1 = nn.Dropout(dropout)
 
         self.fc2 = nn.Linear(d_model, d_model)
@@ -69,8 +78,22 @@ class ViT(Module):
     def forward(self, x: torch.Tensor):
         """
 
-        :param x: patch list [Seq, Batch, Length, Width, Channel]
+        :param x: patch list [batch, row, col, channel]
         """
+        batch = x.size()[0]
+        row = x.size()[1]
+        col = x.size()[2]
+        channel = x.size()[3]
+
+        assert (row, col, channel) == self.img_size, "input size should should match the model preset"
+
+        
+        x = torch.reshape(x, (batch, self.split[0], row//self.split[0], self.split[1], col//self.split[1], channel))
+        x = torch.transpose(x, 2, 3)
+        x = torch.reshape(x, (batch, self.split[0]* self.split[1], row//self.split[0], col//self.split[1], channel))
+        x = torch.transpose(x, 0, 1)
+
+        print(x.size())
 
         x = torch.flatten(x, start_dim=2, end_dim=-1)
         x = self.fc1(x)
@@ -93,8 +116,6 @@ class ViT(Module):
         x = self.fc2(x)
         self.dropout2(x)
         x = self.softmax(x)
-        
-        print(x.size())
         return x
         
 
