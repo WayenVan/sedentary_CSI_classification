@@ -93,8 +93,6 @@ class ViT(Module):
         x = torch.reshape(x, (batch, self.split[0]* self.split[1], row//self.split[0], col//self.split[1], channel))
         x = torch.transpose(x, 0, 1)
 
-        print(x.size())
-
         x = torch.flatten(x, start_dim=2, end_dim=-1)
         x = self.fc1(x)
         x = self.dropout1(x)
