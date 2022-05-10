@@ -6,7 +6,7 @@ import torch
 from torch.nn import Module
 from torch.nn.modules.transformer import TransformerEncoder, TransformerEncoderLayer
 from torch.nn.modules import LayerNorm
-from torch import nn
+from torch import float64, nn
 
 import numpy as np
 import typing
@@ -56,18 +56,18 @@ class ViT(Module):
         }
      
 
-        encoder_layer = TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout, activation, layer_norm_eps)
-        layer_norm = LayerNorm(d_model, eps=layer_norm_eps)
+        encoder_layer = TransformerEncoderLayer(d_emb, nhead, dim_feedforward, dropout, activation, layer_norm_eps)
+        layer_norm = LayerNorm(d_emb, eps=layer_norm_eps)
         self.encoder = TransformerEncoder(encoder_layer, num_layer, norm=layer_norm)
 
-        self.class_emb = torch.rand([d_emb], dtype=torch.float).cuda()
+        self.class_emb = torch.rand([d_emb], dtype=torch.float64).cuda()
         self.class_emb.requires_grad = True
 
         if not isinstance(img_size, typing.Tuple) and sizeof(img_size) == 3:
             raise ValueError("The img_size must be a 3 dimension tuple, current value={}".format(img_size))
 
         self.activation_func1 = active_funcs[activation]
-        self.fc1 = nn.Linear(np.prod([img_size[0]//self.split[0], img_size[1]//self.split[1], img_size[2]]), d_emb)
+        self.fc1 = nn.Linear(np.prod([img_size[0]//self.split[0], img_size[1]//self.split[1], img_size[2]]), d_emb, dtype=float64)
         self.dropout1 = nn.Dropout(dropout)
 
         self.fc2 = nn.Linear(d_model, d_model)

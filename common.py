@@ -33,8 +33,8 @@ def onehot_encoding(label, num_class):
     _label = np.eye(num_class)[label-1]     # from label to onehot
     return _label
 
-def load_data(path_to_data, motion_sel):
-    global T_MAX
+def load_data(path_to_data, motion_sel, T_MAX):
+    # global T_MAX
     data = []
     label = []
     for data_root, data_dirs, data_files in os.walk(path_to_data):
@@ -70,8 +70,8 @@ def load_data(path_to_data, motion_sel):
             #    continue
 
             # Save List
-            data.append(data_normed_1.tolist())
-            label.append(label_1)
+            # data.append(data_normed_1.tolist())
+            # label.append(label_1)
             
     # Zero-padding
     # data = zero_padding(data, T_MAX)
