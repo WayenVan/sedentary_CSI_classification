@@ -12,7 +12,8 @@ import os
 # Parameters
 use_existing_model = False
 fraction_for_test = 0.1
-data_dir = r'C:\Users\11853\Desktop\CSI bvp data\MVP\tmp'
+data_dir = r'./dataset/tmp'
+model_dir = r'./saved_models'
 ALL_MOTION = [1,2,3,4,5,6,7,8]
 N_MOTION = len(ALL_MOTION)
 T_MAX = 100
@@ -35,7 +36,7 @@ train_dataset = CustomDataset(data_dir, train_data_list, N_MOTION)
 test_dataset = CustomDataset(data_dir, test_data_list, N_MOTION)
 print('\nLoaded dataset of ' + str(len(train_dataset)) + ' samples')
 
-train_dataloader = DataLoader(train_dataset, batch_size=32,shuffle=True)
+train_dataloader = DataLoader(train_dataset, batch_size=n_batch_size,shuffle=True)
 
 
 # Load or fabricate model
@@ -59,15 +60,18 @@ else:
             Size = trainset.size()
             trainset = torch.reshape(trainset, (Size[0]*Size[1], Size[2], Size[3], Size[4])).cuda()
             label = label.cuda()
+            label = label.type(torch.double)
             outputs = model.forward(trainset)
+            outputs = outputs[:label.size()[0], :]
             loss = lossFunc(outputs, label)
+            print(loss)
             loss.backward()
 
     
     
-    print('Saving trained model...')
-    model.save('model_widar3_trained.h5')
-    torch.save(model, '0510model.pth')
+    # print('Saving trained model...')
+    # model.save(os.path.join(model_dir,'model_widar3_trained.h5'))
+    torch.save(model, os.path.join(model_dir, '0510model.pth'))
 
 # x = torch.rand((10, 1500, 30, 30, 3), dtype=torch.float).cuda()
 # model = ViT(2048, 2048, (30, 30, 3), 8, 12).cuda()

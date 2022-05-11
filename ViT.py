@@ -56,8 +56,8 @@ class ViT(Module):
         }
      
 
-        encoder_layer = TransformerEncoderLayer(d_emb, nhead, dim_feedforward, dropout, activation, layer_norm_eps)
-        layer_norm = LayerNorm(d_emb, eps=layer_norm_eps)
+        encoder_layer = TransformerEncoderLayer(d_emb, nhead, dim_feedforward, dropout, activation, layer_norm_eps, dtype=float64)
+        layer_norm = LayerNorm(d_emb, eps=layer_norm_eps, dtype=float64)
         self.encoder = TransformerEncoder(encoder_layer, num_layer, norm=layer_norm)
 
         self.class_emb = torch.rand([d_emb], dtype=torch.float64).cuda()
@@ -67,10 +67,10 @@ class ViT(Module):
             raise ValueError("The img_size must be a 3 dimension tuple, current value={}".format(img_size))
 
         self.activation_func1 = active_funcs[activation]
-        self.fc1 = nn.Linear(np.prod([img_size[0]//self.split[0], img_size[1]//self.split[1], img_size[2]]), d_emb, dtype=float64)
+        self.fc1 = nn.Linear(np.prod([img_size[0]//self.split[0], img_size[1]//self.split[1], img_size[2]]), d_emb, dtype=torch.float64)
         self.dropout1 = nn.Dropout(dropout)
 
-        self.fc2 = nn.Linear(d_model, d_model)
+        self.fc2 = nn.Linear(d_emb, d_model, dtype=torch.float64)
         self.dropout2 = nn.Dropout(dropout)
         self.softmax = nn.Softmax(dim = -1)
 
