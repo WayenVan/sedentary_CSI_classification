@@ -1,5 +1,5 @@
 
-from ViT import ViT
+from models import ViT
 import torch
 from torchinfo import summary
 

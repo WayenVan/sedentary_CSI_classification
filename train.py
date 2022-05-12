@@ -2,11 +2,10 @@ from torch import tensor
 from torch.utils.data import DataLoader, random_split
 import torch.nn as nn
 from dataset import CustomDataset
-from ViT import ViT
+from models import Vstm
 import torch
 from common import load_data,onehot_encoding,zero_padding,normalize_data
 import time
-import numpy as np
 import os
 
 # Parameters
@@ -45,8 +44,8 @@ if use_existing_model:
 
     print(model)
 else:
-    model = ViT(d_model=8, d_emb = 2048, img_size=(90,90,1),
-        split_grid=(3,3), nhead=4, num_layer=3).cuda()
+    model = Vstm(d_model=8, d_emb = 512, img_size=(90,90,1),
+        split_grid=(3,3), nhead=4, num_layer=2, LSTM_hidden_size=64,LSTM_num_layers=4).cuda()
     print(model)
     model.train()
     lossFunc = nn.CrossEntropyLoss()
@@ -56,13 +55,13 @@ else:
 
         for i, data in enumerate (train_dataloader, 0):
             train, label = data
-            trainset = torch.unsqueeze(train, -1)
-            Size = trainset.size()
-            trainset = torch.reshape(trainset, (Size[0]*Size[1], Size[2], Size[3], Size[4])).cuda()
+            train = torch.transpose(train, 0, 1)
+            trainset = torch.unsqueeze(train, -1).cuda()
+            # Size = trainset.size()
+            # trainset = torch.reshape(trainset, (Size[0]*Size[1], Size[2], Size[3], Size[4])).cuda()
             label = label.cuda()
             label = label.type(torch.double)
             outputs = model.forward(trainset)
-            outputs = outputs[:label.size()[0], :]
             loss = lossFunc(outputs, label)
             print(loss)
             loss.backward()

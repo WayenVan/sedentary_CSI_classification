@@ -2,6 +2,7 @@ from ctypes import sizeof
 import imp
 from posixpath import split
 from turtle import forward, width
+from unicodedata import bidirectional
 import torch
 from torch.nn import Module
 from torch.nn.modules.transformer import TransformerEncoder, TransformerEncoderLayer
@@ -11,6 +12,79 @@ from torch import float64, nn
 import numpy as np
 import typing
 import math
+
+class Vstm(Module):
+    def __init__(self,
+    d_model,
+    d_emb,
+    img_size,
+    split_grid,
+    nhead, 
+    num_layer,
+    LSTM_hidden_size,
+    LSTM_num_layers,
+    dim_feedforward=2048, 
+    dropout=0.1, 
+    activation='relu', 
+    layer_norm_eps=1e-5,
+    bidirectional=False) -> None:
+
+    
+        """my simple ViT
+
+        :param d_model: model dimension
+        :param d_emb: the dimension of image flatten
+        :param img_size: a tuple showing the size of image, (row, col, channel)
+        :param split_grid: (row, col)
+        :param nhead: the head number of multi-head attention
+        :param num_layer: the number of transformer encodeer
+        :param dim_feedforward: the dimension of the feedforward network model, defaults to 2048
+        :param dropout: the dropout value, defaults to 0.1
+        :param activation: activation function, defaults to 'relu'
+        :param layer_norm_eps: the epsilon of layer normalizatio , defaults to 1e-5
+        :raises ValueError: 
+        """
+        super().__init__()
+
+        self.bidirectional = bidirectional
+
+        self.ViT = ViT(d_emb, d_emb, img_size, split_grid, nhead, num_layer, 
+        dim_feedforward, dropout, activation, layer_norm_eps)
+        self.LSTM = nn.LSTM(d_emb, LSTM_hidden_size, LSTM_num_layers, 
+        dropout=dropout, bidirectional = bidirectional, dtype=torch.double)
+        self.fc = nn.Linear(LSTM_hidden_size, d_model, dtype = torch.double)
+        self.dropout = nn.Dropout(dropout)
+        self.softmax = nn.Softmax(dim = -1)
+
+        d = 2 if bidirectional else 1
+        self.c0 = torch.rand((d*LSTM_num_layers, LSTM_hidden_size), requires_grad=True, dtype=torch.double).cuda()
+        self.h0 = torch.rand((d*LSTM_num_layers, LSTM_hidden_size), requires_grad=True, dtype=torch.double).cuda()
+        
+
+    def forward(self,x:torch.Tensor):
+        batch_size = x.size()[1]
+        seq = x.size()[0]
+        size = x.size()
+
+        x = torch.reshape(x, (batch_size*seq, size[2], size[3], size[4]))
+        x = self.ViT(x)
+        x = torch.reshape(x, (seq, batch_size, x.size()[-1]))
+
+        h0 = torch.unsqueeze(self.h0, -2).broadcast_to((-1, batch_size, self.h0.size()[-1])).contiguous()
+        c0 = torch.unsqueeze(self.c0, -2).broadcast_to((-1, batch_size, self.c0.size()[-1])).contiguous()
+
+        
+        
+        _, (hn, cn) = self.LSTM(x, (h0, c0))
+        output = hn[-1, :, :]
+        output = self.fc(output)
+        output = self.dropout(output)
+        output = self.softmax(output)
+
+        return output
+
+
+        
 
 class ViT(Module):
     
@@ -89,9 +163,9 @@ class ViT(Module):
 
         
         x = torch.reshape(x, (batch, self.split[0], row//self.split[0], self.split[1], col//self.split[1], channel))
-        x = torch.transpose(x, 2, 3)
+        x = torch.transpose(x, 2, 3).contiguous()
         x = torch.reshape(x, (batch, self.split[0]* self.split[1], row//self.split[0], col//self.split[1], channel))
-        x = torch.transpose(x, 0, 1)
+        x = torch.transpose(x, 0, 1).contiguous()
 
         x = torch.flatten(x, start_dim=2, end_dim=-1)
         x = self.fc1(x)
@@ -115,7 +189,8 @@ class ViT(Module):
         self.dropout2(x)
         x = self.softmax(x)
         return x
-        
+    
+    
 
     def _positionalencoding1d(self, d_model, length):
         """
