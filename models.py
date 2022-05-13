@@ -38,10 +38,13 @@ class Vstm(Module):
         :param split_grid: (row, col)
         :param nhead: the head number of multi-head attention
         :param num_layer: the number of transformer encodeer
+        :param LSTM_hidden_size: the hidden dimension of LSTM hidden state
+        :param LSTM_num_layers: the layers of LSTM chain
         :param dim_feedforward: the dimension of the feedforward network model, defaults to 2048
         :param dropout: the dropout value, defaults to 0.1
         :param activation: activation function, defaults to 'relu'
         :param layer_norm_eps: the epsilon of layer normalizatio , defaults to 1e-5
+        :param bidirectional: if the LSTM is bidirectional, default to False
         :raises ValueError: 
         """
         super().__init__()
@@ -51,17 +54,20 @@ class Vstm(Module):
         self.ViT = ViT(d_emb, d_emb, img_size, split_grid, nhead, num_layer, 
         dim_feedforward, dropout, activation, layer_norm_eps)
         self.LSTM = nn.LSTM(d_emb, LSTM_hidden_size, LSTM_num_layers, 
-        dropout=dropout, bidirectional = bidirectional, dtype=torch.double)
-        self.fc = nn.Linear(LSTM_hidden_size, d_model, dtype = torch.double)
+        dropout=dropout, bidirectional = bidirectional, dtype=torch.float64)
+        self.fc = nn.Linear(LSTM_hidden_size, d_model, dtype = torch.float64)
         self.dropout = nn.Dropout(dropout)
         self.softmax = nn.Softmax(dim = -1)
 
         d = 2 if bidirectional else 1
-        self.c0 = torch.rand((d*LSTM_num_layers, LSTM_hidden_size), requires_grad=True, dtype=torch.double).cuda()
-        self.h0 = torch.rand((d*LSTM_num_layers, LSTM_hidden_size), requires_grad=True, dtype=torch.double).cuda()
+        self.c0 = torch.rand((d*LSTM_num_layers, LSTM_hidden_size), requires_grad=True, dtype=torch.float64).cuda()
+        self.h0 = torch.rand((d*LSTM_num_layers, LSTM_hidden_size), requires_grad=True, dtype=torch.float64).cuda()
         
 
     def forward(self,x:torch.Tensor):
+        origin_type = x.dtype
+        x = x.type(torch.float64)
+
         batch_size = x.size()[1]
         seq = x.size()[0]
         size = x.size()
@@ -70,8 +76,8 @@ class Vstm(Module):
         x = self.ViT(x)
         x = torch.reshape(x, (seq, batch_size, x.size()[-1]))
 
-        h0 = torch.unsqueeze(self.h0, -2).broadcast_to((-1, batch_size, self.h0.size()[-1])).contiguous()
-        c0 = torch.unsqueeze(self.c0, -2).broadcast_to((-1, batch_size, self.c0.size()[-1])).contiguous()
+        h0 = torch.unsqueeze(self.h0, -2).broadcast_to((-1, batch_size, -1)).contiguous()
+        c0 = torch.unsqueeze(self.c0, -2).broadcast_to((-1, batch_size, -1)).contiguous()
 
         
         
@@ -81,10 +87,8 @@ class Vstm(Module):
         output = self.dropout(output)
         output = self.softmax(output)
 
-        return output
+        return output.type(origin_type)
 
-
-        
 
 class ViT(Module):
     
@@ -135,7 +139,7 @@ class ViT(Module):
         self.encoder = TransformerEncoder(encoder_layer, num_layer, norm=layer_norm)
 
         self.class_emb = torch.rand([d_emb], dtype=torch.float64).cuda()
-        self.class_emb.requires_grad = True
+        self.class_emb.requires_grad_()
 
         if not isinstance(img_size, typing.Tuple) and sizeof(img_size) == 3:
             raise ValueError("The img_size must be a 3 dimension tuple, current value={}".format(img_size))
@@ -154,6 +158,9 @@ class ViT(Module):
 
         :param x: patch list [batch, row, col, channel]
         """
+        origin_type = x.dtype
+        x = x.type(torch.float64)
+
         batch = x.size()[0]
         row = x.size()[1]
         col = x.size()[2]
@@ -163,9 +170,9 @@ class ViT(Module):
 
         
         x = torch.reshape(x, (batch, self.split[0], row//self.split[0], self.split[1], col//self.split[1], channel))
-        x = torch.transpose(x, 2, 3).contiguous()
+        x = torch.transpose(x, 2, 3)
         x = torch.reshape(x, (batch, self.split[0]* self.split[1], row//self.split[0], col//self.split[1], channel))
-        x = torch.transpose(x, 0, 1).contiguous()
+        x = torch.transpose(x, 0, 1)
 
         x = torch.flatten(x, start_dim=2, end_dim=-1)
         x = self.fc1(x)
@@ -188,6 +195,8 @@ class ViT(Module):
         x = self.fc2(x)
         self.dropout2(x)
         x = self.softmax(x)
+
+        x = x.type(origin_type)
         return x
     
     
