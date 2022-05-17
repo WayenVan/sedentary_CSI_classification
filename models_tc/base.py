@@ -1,4 +1,5 @@
 from os import lseek
+from turtle import forward
 
 import torch
 import torch.nn as nn
@@ -24,10 +25,9 @@ class ImgGRU(nn.Module):
         
         self.fc = nn.Sequential(
             nn.Linear(gru_hidden_size, gru_hidden_size, dtype=torch.float64),
-            nn.Dropout(dropout),
             nn.ReLU(),
-            nn.Linear(gru_hidden_size, d_model, dtype=torch.float64),
             nn.Dropout(dropout),
+            nn.Linear(gru_hidden_size, d_model, dtype=torch.float64),
             nn.Softmax(dim=-1)
         )
 
@@ -52,3 +52,40 @@ class ImgGRU(nn.Module):
         output = self.fc(hn[-1, :, :])
         output = output.type(dtype)
         return output
+
+
+class CNN(nn.Module):
+
+    def __init__(self, d_model, channel, dropout=0.1) -> None:
+        super().__init__()
+        self.conv = nn.Sequential(
+            nn.Conv2d(channel, 32, 3),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, 3),
+            nn.ReLU(),
+            nn.MaxPool2d((2, 2)),
+            nn.Dropout(dropout)
+        )
+
+        self.flatten = nn.Flatten(start_dim=-3)
+
+        self.fc = nn.Sequential(
+            nn.Linear(9216, 128),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(128, d_model),
+            nn.Softmax(dim=-1)
+        )
+
+    # @torchsnooper.snoop()
+    def forward(self, x):
+        """
+        :param x [s, b, c, h, w]
+        """
+        x = x.type(torch.float32)
+        x = x.contiguous()
+        x = self.conv(x)
+        x = self.flatten(x)
+        x = self.fc(x)
+
+        return x 

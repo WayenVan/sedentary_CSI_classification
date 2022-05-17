@@ -5,7 +5,7 @@ from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 from einops import rearrange
 from models_tc.BvP import BvP
-from models_tc.base import ImgGRU
+from models_tc.base import ImgGRU, CNN  
 from common import print_parameters, print_parameters_grad
 import torch.nn.functional as F
 
@@ -62,9 +62,10 @@ train_loader = DataLoader(train_data, batch_size=batch_size)
 test_loader = DataLoader(train_data, batch_size=test_batch_size)
 
 model = ImgGRU(10, (1, 28, 28), 2).to(device)
+# model = CNN(10, channel=1).to(device)
 summary(model, input_data=torch.rand([32, 1, 28, 28], dtype=torch.float64), device=device)
 
-optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
+optimizer = torch.optim.SGD(model.parameters(), lr=2.)
 lossfunc = torch.nn.CrossEntropyLoss()
 
 for epoch in range(1, n_epoch + 1):

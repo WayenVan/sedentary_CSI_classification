@@ -24,6 +24,14 @@ def load_data_BvP(path_to_dataset, file_name, T_MAX):
 
     return data_1, label_1
 
+def load_data_catm(path_to_dataset, file_name, T_MAX):
+    file_path = os.path.join(path_to_dataset, file_name)
+
+    data_1 = scio.loadmat(file_path)['save_spect']
+    label_1 = int(file_name.split('-')[1]) - 1
+    
+    return data_1, label_1
+
 
 
 def print_parameters_grad(model: nn.Module):
