@@ -2,7 +2,7 @@ import os
 from socketserver import DatagramRequestHandler
 import numpy as np
 import scipy.io as scio
-
+import torch.nn as nn
 
 
 
@@ -85,4 +85,15 @@ def load_data(path_to_data, motion_sel, T_MAX):
 
     # data(ndarray): [N,T_MAX,20,20,1], label(ndarray): [N,N_MOTION]
     return data, label
+
+def print_parameters_grad(model: nn.Module):
+    named_parameters = model.named_parameters()
+    for name, parms in named_parameters:
+        print("--->name:", name, '--->grad_requires:', parms.requires_grad, '--->grad_value:', parms.grad)
+
+def print_parameters(model: nn.Module):
+    named_parameters = model.named_parameters()
+    for name, parms in named_parameters:
+        print("--->name:", name, '--->grad_requires:', parms.requires_grad, '--->parms_value:', parms)
+
 

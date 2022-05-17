@@ -1,22 +1,24 @@
-from pickletools import optimize
-from tkinter import E
-from torch import tensor
 from torch.utils.data import DataLoader, random_split
 import torch.nn as nn
-from dataset import CustomDataset
+import torch.nn.functional as F
+from zmq import device
+from dataset import BvPDataset, MyDataset
 
 from torchinfo import summary
 
-from models.Vstm import Vstm
-from models.BvP import BvP
+from models_tc.Vstm import Vstm
+from models_tc.BvP import BvP
+from models_tc.base import ImgGRU
 
 import torch
-import time
 import os
-import math
+
+from einops import rearrange
+from common import print_parameters_grad, print_parameters
 
 # Parameters
-model_select = 'bvp'
+# model_select = 'bvp'
+model_select = 'img_gru'
 fraction_for_test = 0.1
 data_dir = r'dataset/BVP/6-link/user1'
 # data_dir = r'dataset/DAM_nonToF/all0508'
@@ -27,46 +29,62 @@ T_MAX = 50
 n_epochs = 10
 f_dropout_ratio = 0.5
 n_batch_size = 32
+n_test_batch_size = 64
 f_learning_rate = 0.001
 img_size = (1, 30, 30)
 envrionment = (1,)
+use_cuda = True
+log_interval = 10
+dry_run = False
+
+device = torch.device("cuda" if use_cuda else "cpu")
+
+def train(model, device, train_loader, loss_func, optimizer, epoch):
+    model.train()
+    for batch_idx, (data, target) in enumerate(train_loader):
+        data, target = data.to(device), target.to(device)
+        batch_size = len(data)
+        data = torch.transpose(data, 0, 1)
+        target = torch.argmax(target, -1)
+        data = data.double()
+        optimizer.zero_grad()
+        output = model(data)
+        loss = loss_func(output, target)
+        loss.backward()
+        # print_parameters_grad(model)
+        optimizer.step()
+        if batch_idx % log_interval == 0:
+            print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
+                epoch, batch_idx * batch_size, len(train_loader.dataset),
+                100. * batch_idx / len(train_loader), loss.item()))
+            if dry_run:
+                break
 
 
-def train(model, dataloader, optimizer, lossFunc, in_cuda=False):
+def test(model, device, test_loader, loss_func):
+    model.eval()
+    test_loss = 0
+    correct = 0
+    with torch.no_grad():
+        for data, target in test_loader:
+            data, target = data.to(device), target.to(device)
 
-    for epoch in range(n_epochs):
+            data = torch.transpose(data, 0, 1)
+            target = torch.argmax(target, -1)
 
-        time_start = time.time()
-        losses = []
+            data = data.double()
+            output = model(data)
+            test_loss += loss_func(output, target, reduction='sum').item()  # sum up batch loss
+            pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
+            correct += pred.eq(target.view_as(pred)).sum().item()
+            
+    test_loss /= len(test_loader.dataset)
 
-        for i, data in enumerate (dataloader, 0):
+    print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+        test_loss, correct, len(test_loader.dataset),
+        100. * correct / len(test_loader.dataset)))
 
-            train, label = data
-            train = torch.transpose(train, 0, 1)
-
-            #[s, b, channel, height, width]
-            if in_cuda:
-                label = label.cuda()
-                train = train.cuda()
-
-            outputs = model(train)
-
-            loss = lossFunc(outputs, label).requires_grad_()
-
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            print(list(model.parameters())[-1][-1])
-            #precision
-            p = torch.argmax(outputs, dim=-1)
-            l = torch.argmax(label, dim=-1)
-
-            losses.append(loss)
-            print("Epoch {:}/{:}, Batch {:}/{:} loss: {:}".format(epoch+1, n_epochs+1, i, 
-            math.ceil(len(train_dataset)/n_batch_size),loss.item()))
-
-
+#-----------------loading data-----------------#
 data_list_origin = os.listdir(data_dir)
 
 #select envioronment
@@ -83,29 +101,36 @@ train_data_list, test_data_list = random_split(data_list, [data_len-test_number,
 
 # Package the dataset
 # dataset = CustomDataset(data_train, label_train)
-train_dataset = CustomDataset(data_dir, train_data_list, N_MOTION, T_MAX)
-test_dataset = CustomDataset(data_dir, test_data_list, N_MOTION, T_MAX)
+train_dataset = BvPDataset(data_dir, train_data_list, N_MOTION, T_MAX)
+test_dataset = BvPDataset(data_dir, test_data_list, N_MOTION, T_MAX)
 print('\nLoaded dataset of ' + str(len(train_dataset)) + ' samples')
 
-
 train_dataloader = DataLoader(train_dataset, batch_size=n_batch_size, shuffle=True)
-
+test_dataloader = DataLoader(test_dataset, batch_size=n_test_batch_size, shuffle=True)
 
 #-----------load model-------------#
 if model_select == "vstm":
     model = Vstm(d_model=N_MOTION, d_emb = 512, img_size=img_size,
         split_grid=(3,3), nhead=16, num_layer=4, LSTM_hidden_size=512,
-         LSTM_num_layers=2, bidirectional=True).cuda()
+         LSTM_num_layers=2, bidirectional=True).to(device)
 
 if model_select == 'bvp':
-    model = BvP(d_model=N_MOTION, img_size=img_size, gru_num_layers=4)
+    model = BvP(d_model=N_MOTION, img_channel=img_size[0], gru_num_layers=8).to(device)
+
+if model_select == 'img_gru':
+    model = ImgGRU(d_model=N_MOTION, img_size=img_size, gru_num_layers=4, gru_hidden_size=128).to(device)
 
 
 #----------train model-------------#
-summary(model, input_data=torch.rand((T_MAX, 3, img_size[0], img_size[1], img_size[2]), dtype=torch.float64))
+summary(model, input_data=torch.rand((T_MAX, 3, img_size[0], img_size[1], img_size[2]), dtype=torch.float64), device=device)
 lossFunc = nn.CrossEntropyLoss(reduction="mean")
-optimizer = torch.optim.SGD(model.parameters(), lr = 0.01)
-train(model, train_dataloader, optimizer, lossFunc)
+optimizer = torch.optim.SGD(model.parameters(), lr = 1e-2)
+
+for epoch in range(1, n_epochs + 1):
+    train(model, device, train_dataloader, lossFunc, optimizer, epoch)
+    test(model, device, test_dataloader, F.cross_entropy)
+
+    
 
     
 
