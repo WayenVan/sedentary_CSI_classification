@@ -55,17 +55,13 @@ def test(model, device, test_loader):
         test_loss, correct, len(test_loader.dataset),
         100. * correct / len(test_loader.dataset)))
 
-
-# ret = rearrange(img, 'c (h hs) (w ws) -> (h w) c hs ws', h=3, w=3)
-
 train_data = torchvision.datasets.MNIST(r'dataset', transform=transforms.Compose([transforms.ToTensor()]), train=True)
 test_data = torchvision.datasets.MNIST(r'dataset', transform=transforms.Compose([transforms.ToTensor()]), train=False)
 
 train_loader = DataLoader(train_data, batch_size=batch_size)
 test_loader = DataLoader(train_data, batch_size=test_batch_size)
 
-# model = BvP(10, 1, 16).to(device)
-model = ImgGRU(10, (1, 28, 28), 2)
+model = ImgGRU(10, (1, 28, 28), 2).to(device)
 summary(model, input_data=torch.rand([32, 1, 28, 28], dtype=torch.float64), device=device)
 
 optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)

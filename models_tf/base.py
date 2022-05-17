@@ -1,12 +1,16 @@
 import tensorflow as tf
-import tensorflow.keras
-from keras import Dense
+import keras as k
+from keras import layers
+from keras import models
+class ImgGRU(layers.Layer):
 
-keras = tensorflow.keras
+    def __init__(self, d_model, img_size, gru_num_layers,
+                 fc_hidden_size= 64, gru_hidden_size=64, dropout=0.1):
 
-print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+        self.gru = layers.GRU()
+        self.fc = models.Sequential(
+            layers.Dense(fc_hidden_size, activation='relu'),
+            layers.Dense(d_model, activation='softmax')
+        )
 
-x = tf.random.uniform([32,64 ])
-x = Dense(128, activation='relu')(x)
-print(x)
 

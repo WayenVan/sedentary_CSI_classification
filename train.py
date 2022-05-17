@@ -17,8 +17,8 @@ from einops import rearrange
 from common import print_parameters_grad, print_parameters
 
 # Parameters
-# model_select = 'bvp'
-model_select = 'img_gru'
+model_select = 'bvp'
+
 fraction_for_test = 0.1
 data_dir = r'dataset/BVP/6-link/user1'
 # data_dir = r'dataset/DAM_nonToF/all0508'
@@ -94,15 +94,13 @@ data_list = data_list_origin
 #         data_list.append(file_name)
 
 data_len = len(data_list)
-
+dataset = BvPDataset(data_dir, data_list, N_MOTION, T_MAX)
 # Split train and test
 test_number = round(data_len*fraction_for_test)
-train_data_list, test_data_list = random_split(data_list, [data_len-test_number, test_number])
+train_dataset, test_dataset = random_split(dataset, [data_len-test_number, test_number])
 
 # Package the dataset
 # dataset = CustomDataset(data_train, label_train)
-train_dataset = BvPDataset(data_dir, train_data_list, N_MOTION, T_MAX)
-test_dataset = BvPDataset(data_dir, test_data_list, N_MOTION, T_MAX)
 print('\nLoaded dataset of ' + str(len(train_dataset)) + ' samples')
 
 train_dataloader = DataLoader(train_dataset, batch_size=n_batch_size, shuffle=True)
