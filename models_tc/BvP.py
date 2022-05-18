@@ -8,11 +8,11 @@ import torchsnooper
 
 class BvP(nn.Module):
     
-    def __init__(self, d_model, img_channel, gru_num_layers, linear_emb = 64, gru_hidden_size=64, dropout=0.1) -> None:
+    def __init__(self, d_model, img_size, gru_num_layers, linear_emb = 64, gru_hidden_size=64, dropout=0.1) -> None:
         super(BvP, self).__init__()
     
         self.cnn = nn.Sequential(
-            nn.Conv2d(img_channel, 64, (3, 3), dtype=torch.float64),
+            nn.Conv2d(img_size[0], 64, (3, 3), dtype=torch.float64),
             nn.ReLU(),
             nn.Conv2d(64, 64, (3, 3), dtype=torch.float64),
             nn.ReLU(),
@@ -21,8 +21,14 @@ class BvP(nn.Module):
 
         self.flatten =  nn.Flatten(start_dim=-3)
 
+        #find the fc shape:
+        tmp = torch.rand([1, img_size[0], img_size[1], img_size[2]], dtype=torch.float64) 
+        cnn_output = self.cnn(tmp)
+        cnn_output = self.flatten(cnn_output)
+        linear_input_shape = cnn_output.size()[-1]
+
         self.fc1 = nn.Sequential(
-            nn.Linear(10816, linear_emb, dtype=torch.float64),
+            nn.Linear(linear_input_shape, linear_emb, dtype=torch.float64),
             nn.Dropout(dropout),
             nn.ReLU(),
             nn.Linear(linear_emb, linear_emb, dtype=torch.float64),

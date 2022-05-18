@@ -38,3 +38,4 @@ class BvP(Model):
         output = self.fc(hn, training=training)
 
         return output
+

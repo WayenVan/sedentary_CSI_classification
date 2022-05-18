@@ -39,8 +39,6 @@ class BvPDataset(Dataset):
         return data_1, label_1
 
 
-        
-
 class MyDataset(Dataset):
     
     def __init__(self, path_to_data, data_list, num_class, T_MAX, img_size=(30, 30)) -> None:

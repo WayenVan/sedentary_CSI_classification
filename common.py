@@ -4,6 +4,9 @@ import numpy as np
 import scipy.io as scio
 import torch.nn as nn
 
+
+"""----------util functions-------------------"""
+
 def zero_padding(data, T_MAX):
     # data(list)=>data_pad(ndarray): [20,20,T1/T2/...]=>[20,20,T_MAX]
     data_pad = []

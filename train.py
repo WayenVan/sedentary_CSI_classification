@@ -18,20 +18,21 @@ from common import print_parameters_grad, print_parameters
 
 # Parameters
 model_select = 'bvp'
-
-fraction_for_test = 0.1
 data_dir = r'dataset/BVP/6-link/user1'
 # data_dir = r'dataset/DAM_nonToF/all0508'
 model_dir = r'./saved_models'
-ALL_MOTION = [0,1,2,3,4, 5]
+
+ALL_MOTION = [0,1,2,3,4,5]
 N_MOTION = len(ALL_MOTION)
 T_MAX = 50
-n_epochs = 10
-f_dropout_ratio = 0.5
+img_size = (1, 30, 30)
+
+n_epochs = 100
 n_batch_size = 32
 n_test_batch_size = 64
-f_learning_rate = 0.001
-img_size = (1, 30, 30)
+f_learning_rate = 0.0001
+
+fraction_for_test = 0.1
 envrionment = (1,)
 use_cuda = True
 log_interval = 10
@@ -100,7 +101,6 @@ test_number = round(data_len*fraction_for_test)
 train_dataset, test_dataset = random_split(dataset, [data_len-test_number, test_number])
 
 # Package the dataset
-# dataset = CustomDataset(data_train, label_train)
 print('\nLoaded dataset of ' + str(len(train_dataset)) + ' samples')
 
 train_dataloader = DataLoader(train_dataset, batch_size=n_batch_size, shuffle=True)
@@ -113,7 +113,7 @@ if model_select == "vstm":
          LSTM_num_layers=2, bidirectional=True).to(device)
 
 if model_select == 'bvp':
-    model = BvP(d_model=N_MOTION, img_channel=img_size[0], gru_num_layers=8).to(device)
+    model = BvP(d_model=N_MOTION, img_size=img_size, gru_num_layers=8).to(device)
 
 if model_select == 'img_gru':
     model = ImgGRU(d_model=N_MOTION, img_size=img_size, gru_num_layers=4, gru_hidden_size=128).to(device)
@@ -121,11 +121,10 @@ if model_select == 'img_gru':
 
 #----------train model-------------#
 summary(model, input_data=torch.rand((T_MAX, 3, img_size[0], img_size[1], img_size[2]), dtype=torch.float64), device=device)
-lossFunc = nn.CrossEntropyLoss(reduction="mean")
-optimizer = torch.optim.SGD(model.parameters(), lr = 1e-2)
+optimizer = torch.optim.Adam(model.parameters(), lr = f_learning_rate)
 
 for epoch in range(1, n_epochs + 1):
-    train(model, device, train_dataloader, lossFunc, optimizer, epoch)
+    train(model, device, train_dataloader, F.cross_entropy, optimizer, epoch)
     test(model, device, test_dataloader, F.cross_entropy)
 
     
