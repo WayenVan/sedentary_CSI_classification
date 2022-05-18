@@ -13,7 +13,6 @@ class CADM(Model):
             Sequential([
                 Conv2D(filters, 3, activation='relu'),
                 Residual(filters),
-                Residual(filters),
                 MaxPooling2D((2, 2)),
                 Flatten(),
                 Dropout(dropout),

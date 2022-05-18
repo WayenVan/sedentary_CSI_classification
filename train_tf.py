@@ -1,8 +1,5 @@
 from random import shuffle
-from turtle import shape
 
-from numpy import dtype
-import dataset
 from  models_tf.BvP import BvP
 import os
 import tensorflow as tf
@@ -27,7 +24,7 @@ use_cuda = True
 #training parameter
 n_epochs = 10
 n_batch_size = 32
-learning_rate = 0.00005
+learning_rate = 0.0001
 
 #model parameter
 ALL_MOTION = [0, 1, 2, 3, 4, 5, 6, 7]
