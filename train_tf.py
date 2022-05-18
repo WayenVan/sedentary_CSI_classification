@@ -49,16 +49,6 @@ shuffle(data_list)
 
 data_gen = CatmGenerator(data_list, data_dir, N_MOTION, T_MAX, img_resize=(img_size[0], img_size[1]))
 
-# def data_gen():
-#     for file_name in data_list:
-#         data, label = load_data_catm(data_dir, file_name, T_MAX)
-#         data = tf.convert_to_tensor(data, dtype=tf.float32)
-#         data = rearrange(data, 's h (w c)  -> s h w c', c=1)
-#         data = tf.image.resize(data, (img_size[0], img_size[1]))
-#         label = tf.convert_to_tensor(label, dtype=tf.int32)
-#         yield data, label
-
-
 dataset = Dataset.from_generator(
     data_gen.generator,
     output_signature=(

@@ -1,8 +1,10 @@
+from importlib.resources import path
 import os
 from socketserver import DatagramRequestHandler
 import numpy as np
 import scipy.io as scio
 import torch.nn as nn
+from random import shuffle
 
 
 """----------util functions-------------------"""
@@ -35,6 +37,29 @@ def load_data_catm(path_to_dataset, file_name, T_MAX):
     
     return data_1, label_1
 
+
+def load_data_TofAtm(path_to_dataset, file_name):
+    pass
+
+def load_data_timeData(path_to_dataset, file_name):
+    file_path = os.path.join(path_to_dataset, file_name)
+
+    data = scio.loadmat(file_path)['timesData']
+    data = np.abs(data)
+    label = int(file_name.split('-')[1]) - 1
+
+    return data, label
+
+def random_split_data_list(data_list: list, test_ratio):
+    shuffle(data_list)
+    test_size = round(len(data_list)*test_ratio)
+    train_size = len(data_list) - test_size
+    train_list = data_list[:train_size]
+    test_list = data_list[train_size:]
+    return train_list, test_list
+
+
+    
 
 
 def print_parameters_grad(model: nn.Module):
