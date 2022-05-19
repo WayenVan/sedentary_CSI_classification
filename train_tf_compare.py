@@ -17,7 +17,7 @@ data_dir = "dataset/timeData"
 test_split_ratio = 0.1
 envrionment = 1
 
-learning_rate = 0.0001
+learning_rate = 1e-1
 batch_size = 32
 hidden_size = 64
 
