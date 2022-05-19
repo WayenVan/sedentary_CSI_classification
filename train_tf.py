@@ -5,18 +5,17 @@ import os
 import tensorflow as tf
 from models_tf.CADM import CADM
 from tensorflow.data import Dataset
-from dataset_tf import CatmGenerator
+from generator import CatmGenerator
 import json
-
+from common import random_split_data_list
 
 from keras import optimizers, losses, metrics
 import keras
 
 #global parameter
-# model_select = 'bvp'
-model_select = 'cadm'
+model_select = 'bvp'
+# model_select = 'cadm'
 fraction_for_test = 0.1
-# data_dir = r'dataset/BVP/6-link/user1'
 data_dir = r'dataset/DAM_nonToF/all0508'
 model_dir = r'./saved_models'
 use_cuda = True
@@ -29,11 +28,15 @@ learning_rate = 0.0001
 #model parameter
 ALL_MOTION = [0, 1, 2, 3, 4, 5, 6, 7]
 N_MOTION = len(ALL_MOTION)
-T_MAX = 100
+T_MAX = None
 img_size = (30, 30, 1)
+sequence_sample_step = None
 
 
-envrionment = (1,)
+envrionment = 1
+
+model_save_dir = os.path.join('saved_models', '{}_catm_env{}'.format(model_select, envrionment))
+os.makedirs(model_save_dir+'/', exist_ok=True)
 
 """-----------------loading data-----------------"""
 data_list_origin = os.listdir(data_dir)
@@ -41,61 +44,71 @@ data_list_origin = os.listdir(data_dir)
 #select envioronment
 data_list = []
 for file_name in data_list_origin:
-    if int(file_name.split('-')[2]) in envrionment:
+    if int(file_name.split('-')[2]) == envrionment:
         data_list.append(file_name)
 
 #shuffle
 shuffle(data_list)
 
-data_gen = CatmGenerator(data_list, data_dir, N_MOTION, T_MAX, img_resize=(img_size[0], img_size[1]))
+#split
+train_list, test_list = random_split_data_list(data_list, fraction_for_test)
 
-dataset = Dataset.from_generator(
-    data_gen.generator,
+train_gen = CatmGenerator(train_list, data_dir, img_resize=(img_size[0], img_size[1]), sample_step=sequence_sample_step)
+test_gen = CatmGenerator(test_list, data_dir, img_resize=(img_size[0], img_size[1]), sample_step=sequence_sample_step)
+
+T_MAX_TRAIN = train_gen.sequence_len()
+T_MAX_TEST = test_gen.sequence_len()
+
+train_set = Dataset.from_generator(
+    train_gen.generator,
     output_signature=(
-        tf.TensorSpec(shape=(T_MAX, img_size[0], img_size[1], img_size[2]), dtype=tf.float32),
+        tf.TensorSpec(shape=(T_MAX_TRAIN, img_size[0], img_size[1], img_size[2]), dtype=tf.float32),
         tf.TensorSpec(shape=(), dtype=tf.int32)
     )
-)
+).batch(n_batch_size)
 
-test_size = int(len(data_list) * fraction_for_test)
-train_size = len(data_list) - test_size
+test_set = Dataset.from_generator(
+    test_gen.generator,
+    output_signature=(
+        tf.TensorSpec(shape=(T_MAX_TEST, img_size[0], img_size[1], img_size[2]), dtype=tf.float32),
+        tf.TensorSpec(shape=(), dtype=tf.int32)
+    )
+).batch(n_batch_size)
 
-train_dataset = dataset.take(train_size)
-test_dataset = dataset.skip(train_size)
-
-train_dataset = train_dataset.batch(n_batch_size)
-test_dataset = test_dataset.batch(n_batch_size)
-
+print('done loading data, train samples:{}, test samples:{}'.format(len(train_list), len(test_list)))
 
 """-----------------create model -----------------"""
-
 if model_select == 'bvp':
-
-    h_parameters = {
-        "img_size":img_size,
-        "d_model": T_MAX
+    info = {
+        'data_set':'CATM',
+        'train_list': train_list,
+        'test_list': test_list,
+        'sequence_sample': sequence_sample_step,
+        'model_name':model_select,
+        'input_shape':[-1, img_size[0], img_size[1], img_size[2]],
+        'd_model': N_MOTION
     }
-    with open('saved_models/'+model_select+'/h_parameters.json', 'w') as f:
-        json.dump(h_parameters, f)
-    
-    model = BvP(T_MAX)
+
+    model = BvP(N_MOTION)
     model.compile(
         optimizer=optimizers.Adam(learning_rate=learning_rate),
         loss=losses.SparseCategoricalCrossentropy(),
         metrics=[metrics.SparseCategoricalAccuracy()]
-        )
+    )
 
 
 if model_select == 'cadm':
-
-    h_parameters = {
-        "img_size":img_size,
-        "d_model": T_MAX
+    info = {
+        'data_set':'CATM',
+        'train_list': train_list,
+        'test_list': test_list,
+        'sequence_sampe': sequence_sample_step,
+        'model_name':model_select,
+        'input_shape':[-1, img_size[0], img_size[1], img_size[2]],
+        'd_model': N_MOTION
     }
-    with open('saved_models/'+model_select+'/h_parameters.json', 'w') as f:
-        json.dump(h_parameters, f)
-    
-    model = CADM(T_MAX)
+
+    model = CADM(N_MOTION)
     model.compile(
         optimizer=optimizers.Adam(learning_rate=learning_rate),
         loss=losses.SparseCategoricalCrossentropy(),
@@ -104,17 +117,22 @@ if model_select == 'cadm':
         )
 
 """--------------------training---------------------------"""
+
+#save model infomations
+with open(os.path.join(model_save_dir, 'info.json'), 'w') as f:
+        json.dump(info, f)
+
 x = model(tf.random.uniform(shape=(12, T_MAX, img_size[0], img_size[1], img_size[2])))
 model.summary()
 print("total data amount: {}".format(len(data_list)))
 
 checkpoint = keras.callbacks.ModelCheckpoint(
-    'saved_models/'+model_select+'/checkpoint_{epoch:02d}', 
+    model_save_dir+'/checkpoint_{epoch:02d}', 
     save_weights_only=True,
     monitor = 'val_sparse_categorical_accuracy',
     mode = 'max',
     save_best_only=True
 )
-model.fit(x=train_dataset, epochs=100, validation_data=test_dataset, callbacks=[checkpoint])
+model.fit(x=train_set, epochs=100, validation_data=test_set, callbacks=[checkpoint])
 
 

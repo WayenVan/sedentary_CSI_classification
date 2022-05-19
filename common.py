@@ -29,7 +29,7 @@ def load_data_BvP(path_to_dataset, file_name, T_MAX):
 
     return data_1, label_1
 
-def load_data_catm(path_to_dataset, file_name, T_MAX):
+def load_data_catm(path_to_dataset, file_name):
     file_path = os.path.join(path_to_dataset, file_name)
 
     data_1 = scio.loadmat(file_path)['save_spect']
@@ -41,10 +41,10 @@ def load_data_catm(path_to_dataset, file_name, T_MAX):
 def load_data_TofAtm(path_to_dataset, file_name):
     pass
 
-def load_data_timeData(path_to_dataset, file_name):
+def load_data_timeData(path_to_dataset, file_name, index_name):
     file_path = os.path.join(path_to_dataset, file_name)
 
-    data = scio.loadmat(file_path)['timesData']
+    data = scio.loadmat(file_path)[index_name]
     data = np.abs(data)
     label = int(file_name.split('-')[1]) - 1
 

@@ -2,7 +2,7 @@ from genericpath import exists
 import os
 
 from torch import lstm
-from dataset_tf import TimeDataGenerator
+from generator import TimeDataGenerator
 from common import random_split_data_list
 
 import tensorflow as tf
@@ -12,14 +12,24 @@ import keras
 import json
 from tensorflow.data import Dataset
 
-dataset_selection = "timedata"
 data_dir = "dataset/timeData"
+index_name = 'dop_spec_direct'
 test_split_ratio = 0.1
 envrionment = 1
 
-learning_rate = 1e-1
+learning_rate = 1e-5
 batch_size = 32
 hidden_size = 64
+
+if index_name == 'timeData':
+    INPUT_DIM = 8
+if index_name == 'dop_spec_direct':
+    INPUT_DIM = 61
+if index_name == 'dop_spec_ToF':
+    INPUT_DIM = 61
+
+N_MOTION = 8
+T_MAX = 3000
 
 def environment_sel(data_list, env):
     ret = []
@@ -30,18 +40,14 @@ def environment_sel(data_list, env):
 
 """--------load data list------------"""
 
-if dataset_selection == "timedata":
-    N_MOTION = 8
-    INPUT_DIM = 1
-    T_MAX = 3000
 
-    data_list = os.listdir(data_dir)
-    data_list = environment_sel(data_list, envrionment)
+data_list = os.listdir(data_dir)
+data_list = environment_sel(data_list, envrionment)
 
-    train_list, test_list = random_split_data_list(data_list, test_split_ratio)
-    train_gen = TimeDataGenerator(train_list, data_dir)
-    test_gen = TimeDataGenerator(test_list, data_dir)
-    
+train_list, test_list = random_split_data_list(data_list, test_split_ratio)
+train_gen = TimeDataGenerator(train_list, data_dir, index_name)
+test_gen = TimeDataGenerator(test_list, data_dir, index_name)
+
 
 dataset_train = Dataset.from_generator(
     train_gen.generator,
@@ -64,13 +70,13 @@ dataset_test = dataset_test.batch(batch_size)
 
 """-------create model----------"""
 
-if dataset_selection == "timedata":
-    model_save_dir = os.path.join(
-        'saved_models', 
-        'LSTM_{}_env{}'.format(dataset_selection, envrionment))
+
+model_save_dir = os.path.join(
+    'saved_models', 
+    'LSTM_{}_env{}'.format(index_name, envrionment))
 
 info = {
-    "dataset":dataset_selection,
+    "dataset":index_name,
     "input_shape":[T_MAX, INPUT_DIM],
     "train_list":train_list,
     "test_list":test_list,
@@ -82,7 +88,8 @@ with open(model_save_dir+'/h_parameters.json', 'w') as f:
     json.dump(info, f)
 
 inputs = keras.Input(shape=(T_MAX, INPUT_DIM))
-x = LSTM(hidden_size)(inputs)
+x = Dense(hidden_size, activation='relu')(inputs)
+x = LSTM(hidden_size)(x)
 x = Dense(hidden_size, activation='relu')(x)
 x = Dense(N_MOTION, activation='softmax')(x)
 
