@@ -1,1 +1,1 @@
-# Now just a simple Implement with ViT
+# Pytorch Version
