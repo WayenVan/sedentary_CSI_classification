@@ -1,1 +1,5 @@
-# Now just a simple Implement with ViT
+# movement recognition with 5g signal  
+
+implement with tensorflow
+
+to be finished....
