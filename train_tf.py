@@ -13,10 +13,18 @@ from keras import optimizers, losses, metrics
 import keras
 
 #global parameter
-model_select = 'bvp'
-# model_select = 'cadm'
+# model_select = 'bvp'
+model_select = 'cadm'
+
+# model_select = 'CATM_nonToF'
+data_set_select = 'CATM'
+
+if data_set_select == 'CATM':
+    data_dir = r'dataset/DAM_nonToF/all0508'
+if data_set_select == 'CATM_nonToF':
+    data_dir = r'dataset/Nonneg_ToF_ATM'
+
 fraction_for_test = 0.1
-data_dir = r'dataset/DAM_nonToF/all0508'
 model_dir = r'./saved_models'
 use_cuda = True
 
@@ -33,7 +41,7 @@ img_size = (30, 30, 1)
 sequence_sample_step = None
 
 
-envrionment = 1
+envrionment = 2
 
 model_save_dir = os.path.join('saved_models', '{}_catm_env{}'.format(model_select, envrionment))
 os.makedirs(model_save_dir+'/', exist_ok=True)
@@ -80,7 +88,7 @@ print('done loading data, train samples:{}, test samples:{}'.format(len(train_li
 """-----------------create model -----------------"""
 if model_select == 'bvp':
     info = {
-        'data_set':'CATM',
+        'data_set':data_set_select,
         'train_list': train_list,
         'test_list': test_list,
         'sequence_sample': sequence_sample_step,
@@ -99,7 +107,7 @@ if model_select == 'bvp':
 
 if model_select == 'cadm':
     info = {
-        'data_set':'CATM',
+        'data_set':data_set_select,
         'train_list': train_list,
         'test_list': test_list,
         'sequence_sampe': sequence_sample_step,
@@ -122,7 +130,7 @@ if model_select == 'cadm':
 with open(os.path.join(model_save_dir, 'info.json'), 'w') as f:
         json.dump(info, f)
 
-x = model(tf.random.uniform(shape=(12, T_MAX, img_size[0], img_size[1], img_size[2])))
+x = model(tf.random.uniform(shape=(12, T_MAX_TRAIN, img_size[0], img_size[1], img_size[2])))
 model.summary()
 print("total data amount: {}".format(len(data_list)))
 
