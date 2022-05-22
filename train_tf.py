@@ -16,8 +16,8 @@ import keras
 # model_select = 'bvp'
 model_select = 'cadm'
 
-# model_select = 'CATM_nonToF'
-data_set_select = 'CATM'
+data_set_select = 'CATM_nonToF'
+# data_set_select = 'CATM'
 
 if data_set_select == 'CATM':
     data_dir = r'dataset/DAM_nonToF/all0508'
@@ -41,9 +41,9 @@ img_size = (30, 30, 1)
 sequence_sample_step = None
 
 
-envrionment = 2
+envrionment = 3
 
-model_save_dir = os.path.join('saved_models', '{}_catm_env{}'.format(model_select, envrionment))
+model_save_dir = os.path.join('saved_models', '{}_{}_env{}'.format(model_select, data_set_select, envrionment))
 os.makedirs(model_save_dir+'/', exist_ok=True)
 
 """-----------------loading data-----------------"""
@@ -142,5 +142,4 @@ checkpoint = keras.callbacks.ModelCheckpoint(
     save_best_only=True
 )
 model.fit(x=train_set, epochs=100, validation_data=test_set, callbacks=[checkpoint])
-
 

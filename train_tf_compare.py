@@ -6,11 +6,13 @@ from generator import TimeDataGenerator
 from common import random_split_data_list
 
 import tensorflow as tf
-from keras.layers import LSTM, Dense
+from keras.layers import LSTM, Dense, Conv2D, Flatten, MaxPool2D
 from keras import optimizers, losses, metrics
 import keras
 import json
 from tensorflow.data import Dataset
+
+from models_tf.CADM import Residual
 
 data_dir = "dataset/timeData"
 index_name = 'dop_spec_direct'
@@ -88,8 +90,10 @@ with open(model_save_dir+'/h_parameters.json', 'w') as f:
     json.dump(info, f)
 
 inputs = keras.Input(shape=(T_MAX, INPUT_DIM))
-x = Dense(hidden_size, activation='relu')(inputs)
-x = LSTM(hidden_size)(x)
+x = Conv2D(64, 3, activation='relu')(inputs)
+x = Residual(64)(x)
+x = MaxPool2D()(x)
+x = Flatten()(x)
 x = Dense(hidden_size, activation='relu')(x)
 x = Dense(N_MOTION, activation='softmax')(x)
 
