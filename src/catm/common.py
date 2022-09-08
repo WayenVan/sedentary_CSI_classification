@@ -38,9 +38,6 @@ def load_data_catm(path_to_dataset, file_name, T_MAX):
     return data_1, label_1
 
 
-def load_data_TofAtm(path_to_dataset, file_name):
-    pass
-
 def load_data_timeData(path_to_dataset, file_name):
     file_path = os.path.join(path_to_dataset, file_name)
 
