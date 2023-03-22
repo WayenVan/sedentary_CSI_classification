@@ -6,17 +6,14 @@ import sys
 import json
 import torchmetrics
 
-#to find local package, comment this if you installed your package already
-sys.path.append(r'src')
-
 from einops import rearrange
 
 from tqdm import tqdm
 
 from torch.utils.data import DataLoader
 
-from catm.common import random_split_data_list
-from catm.dataset import TimeDataset
+from ..data.common import random_split_data_list
+from ..data.dataset import TimeDataset
 
 from that.Model import HARTrans
 
