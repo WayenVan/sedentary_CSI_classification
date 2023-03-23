@@ -25,7 +25,7 @@ if __name__ == "__main__":
     parser.add_argument('--epoch', type=int, default=50)
     parser.add_argument('--batch', type=int, default=128)
     parser.add_argument('--nclass', type=int, default=8)
-    parser.add_argument('--d_model', type=int, default=124)
+    parser.add_argument('--d_model', type=int, default=128)
     parser.add_argument('--input_dim', type=int, default=61, help='the dim of model\'s inpu')
     parser.add_argument('--n_seq', type=int, default=300, help='the number of channel of the model\'s input')
     parser.add_argument('--K', type=int, default=10)

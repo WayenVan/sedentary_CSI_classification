@@ -165,7 +165,6 @@ class ViT(Module):
         :param x: patch list [batch, channel, height, wideth]
         """
         origin_type = x.dtype
-        x = x.type(torch.float64)
 
         batch = x.size()[0]
         row = x.size()[2]

@@ -1,15 +1,19 @@
 import click 
 import torch
 import torch.nn as nn
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from typing import Union, Tuple
+import os
 
 from csi_catm.models.vstm import Vstm
+from csi_catm.data.dataset import TimeDataset
+from csi_catm.data.common import random_split_data_list
 
 @click.command()
 @click.option('--data_root', default='data', type=str)
 @click.option('--lr', default=1e-3, type=float)
-@click.option('--d_model', default=2028, type=int)
+@click.option('--batch', default=64, type=int)
+@click.option('--d_model', default=8, type=int)
 @click.option('--d_emb', default=2048, type=int)
 @click.option('--img_size', nargs=3, type=int, default=(20, 20, 3), help='channel height width')
 @click.option('--split_grid', nargs=2,type=int, default=(1, 1), help='split grid shape of Vit, (row, col)' )
@@ -32,13 +36,23 @@ def main(data_root,
     """training using the"""
     
     
-    create_model(d_model, d_emb, img_size, split_grid, nhead, num_encoder, d_model, num_lstm_layers,
-                 load_dir=load_dir, dropout=dropout)
+    model = create_model(d_model, d_emb, img_size, split_grid, nhead, num_encoder, d_emb, num_lstm_layers,
+                         load_dir=load_dir, dropout=dropout)
 
     
-def load_data(data_dir: str) -> Tuple[Dataset, Dataset]:
+def load_data(data_dir: str, col_select: str, test_ratio=0.2) -> Tuple[Dataset, Dataset]:
+    list = os.listdir(data_dir)
+    train_list, test_list = random_split_data_list(list, test_ratio)
     
-    return None, None
+    trainset = TimeDataset(data_dir, train_list, 8, col_select=col_select, norm=True)
+    testset = TimeDataset(data_dir, test_list, 8, col_select=col_select, norm=True)
+    
+    temp = trainset[0][0]
+    n_seq = temp.shape[-2]
+    input_dim = temp.shape[-1]
+    
+    # assert (n_seq == args.n_seq) & (input_dim == args.input_dim), 'the input shape of dataset should match that of the model'
+    return trainset, testset
 
 def create_model(*model_attrs, load_dir: Union[None, str] =None, **kwattrs) -> Tuple[nn.Module, dict]:
 

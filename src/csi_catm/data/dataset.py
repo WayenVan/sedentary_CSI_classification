@@ -39,18 +39,20 @@ class BvPDataset(Dataset):
         return data_1, label_1
 
 
-class MyDataset(Dataset):
+class CatmDataset(Dataset):
     
-    def __init__(self, path_to_data, data_list, num_class, T_MAX, img_size=(30, 30)) -> None:
+    def __init__(self, path_to_data, data_list, num_class, t_padding, down_sample=(1, 1)) -> None:
+        """
+        :param down_sample: down_sample for dimension(time, high, width) defaults to (1, 1, 1)
+        """
         super().__init__()
        # self.data_list = data_list
-        self.T_MAX = T_MAX
+        self.t_padding = t_padding
         self.path_to_data = path_to_data
         self.data_list = data_list
         self.num_class = num_class
-        self.img_size = img_size
-        self.resize = tv.transforms.Resize(img_size)
-
+        self.down_sample = down_sample
+        
     def __len__(self):
         return len(self.data_list)
 
@@ -61,14 +63,25 @@ class MyDataset(Dataset):
         
         data_1 = scio.loadmat(file_path)['save_spect']
         label_1 = int(data_file_name.split('-')[1]) - 1
-
+        data_1 = data_1[::self.down_sample[0], ::self.down_sample[1], ::self.down_sample[2], :]
+        data_1 = self._padding_t(data_1, self.t_padding)
+        
         data_1 = torch.tensor(data_1)
-        data_1 = self.resize(data_1)
         data_1 = functional.normalize(data_1, dim=0)
    
         label_1 = functional.one_hot(tensor(label_1), self.num_class).type(torch.float64)
 
         return data_1, label_1
+    
+    def _padding_t(self, data: np.ndarray, padding_length):
+        pad = []
+        for index, dim in enumerate(data.shape):
+            if index == 1:
+                pad.append((padding_length-dim, 0))
+            else:
+                pad.append((0,0))         
+        return np.pad(data, pad, mode='constant', constant_values=0)
+        
     
 
 class TimeDataset(Dataset):
