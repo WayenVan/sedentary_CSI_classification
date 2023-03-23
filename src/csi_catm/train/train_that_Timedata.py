@@ -15,7 +15,7 @@ from torch.utils.data import DataLoader
 from ..data.common import random_split_data_list
 from ..data.dataset import TimeDataset
 
-from that.Model import HARTrans
+from csi_that.Model import HARTrans
 
 if __name__ == "__main__":
     
@@ -89,7 +89,7 @@ if __name__ == "__main__":
     for epoch in range(args.epoch):
         
         #train
-        accuracy_train = torchmetrics.Accuracy(num_classes=args.nclass).to(device)
+        accuracy_train = torchmetrics.Accuracy(task='multiclass', num_classes=args.nclass).to(device)
         tbar = tqdm(trainloader, desc='epoch: '+str(epoch), file=sys.stdout)
         for index, batch_data in enumerate(tbar):           
             opt.zero_grad()
@@ -109,7 +109,7 @@ if __name__ == "__main__":
             })
                      
         #test
-        accuracy_test = torchmetrics.Accuracy(num_classes=args.nclass).to(device)
+        accuracy_test = torchmetrics.Accuracy(task='multiclass', num_classes=args.nclass).to(device)
         
         for index, batch_data in enumerate(testloader):
             x, labels = batch_data

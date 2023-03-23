@@ -148,7 +148,7 @@ class TransCNN(torch.nn.Module):
                              )
             self.encoder_v.append(self.__getattr__(enc_attr_name_v))
 
-    def _aggregate(self, o, v=None):
+    def _aggregate(self, o, v: torch.Tensor = None):
         enc_outs = []
         enc_outs_v = []
         for encoder in self.encoders:

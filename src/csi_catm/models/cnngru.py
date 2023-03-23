@@ -78,7 +78,7 @@ class CNN(nn.Module):
         )
 
     # @torchsnooper.snoop()
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
         """
         :param x [s, b, c, h, w]
         """
