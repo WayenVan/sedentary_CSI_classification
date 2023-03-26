@@ -8,13 +8,13 @@ import torchsnooper
 
 class BvP(nn.Module):
     
-    def __init__(self, d_model, img_size, gru_num_layers, linear_emb = 64, gru_hidden_size=64, dropout=0.1) -> None:
+    def __init__(self, n_class, img_size, gru_num_layers, linear_emb = 64, gru_hidden_size=64, dropout=0.1) -> None:
         super(BvP, self).__init__()
     
         self.cnn = nn.Sequential(
-            nn.Conv2d(img_size[0], 64, (3, 3), dtype=torch.float64),
+            nn.Conv2d(img_size[0], 64, (3, 3)),
             nn.ReLU(),
-            nn.Conv2d(64, 64, (3, 3), dtype=torch.float64),
+            nn.Conv2d(64, 64, (3, 3)),
             nn.ReLU(),
             nn.MaxPool2d((2, 2))
         )
@@ -22,25 +22,25 @@ class BvP(nn.Module):
         self.flatten =  nn.Flatten(start_dim=-3)
 
         #find the fc shape:
-        tmp = torch.rand([1, img_size[0], img_size[1], img_size[2]], dtype=torch.float64) 
+        tmp = torch.rand([1, img_size[0], img_size[1], img_size[2]]) 
         cnn_output = self.cnn(tmp)
         cnn_output = self.flatten(cnn_output)
         linear_input_shape = cnn_output.size()[-1]
 
         self.fc1 = nn.Sequential(
-            nn.Linear(linear_input_shape, linear_emb, dtype=torch.float64),
+            nn.Linear(linear_input_shape, linear_emb),
             nn.Dropout(dropout),
             nn.ReLU(),
-            nn.Linear(linear_emb, linear_emb, dtype=torch.float64),
+            nn.Linear(linear_emb, linear_emb),
             nn.Dropout(dropout),
             nn.ReLU()
         )
 
-        self.h0 = Parameter(torch.rand((gru_num_layers, gru_hidden_size), requires_grad=True, dtype=torch.float64))
-        self.gru = nn.GRU(linear_emb, gru_hidden_size, num_layers=gru_num_layers, dropout=dropout, dtype=torch.float64)
+        self.h0 = Parameter(torch.rand((gru_num_layers, gru_hidden_size), requires_grad=True))
+        self.gru = nn.GRU(linear_emb, gru_hidden_size, num_layers=gru_num_layers, dropout=dropout)
         
         self.fc2 = nn.Sequential(
-            nn.Linear(gru_hidden_size, d_model, dtype=torch.float64),
+            nn.Linear(gru_hidden_size, n_class),
             nn.Dropout(dropout),
             nn.Softmax(dim=-1)
         )
@@ -51,8 +51,6 @@ class BvP(nn.Module):
         [s, b, c, h, w]
         """
         batch_size = x.size()[1]
-        dtype = x.dtype
-        x.type(torch.float64)
 
         #time distributed
         x = rearrange(x, 's b c h w -> (s b) c h w')
@@ -68,7 +66,6 @@ class BvP(nn.Module):
         
         _, hn= self.gru(x, h0)
         output = self.fc2(hn[-1, :, :])
-        output = output.type(dtype)
         return output
 
 

@@ -5,7 +5,7 @@ from torch.utils.data import Dataset, DataLoader
 from typing import Union, Tuple
 import os
 
-from csi_catm.models.vstm import Vstm
+from csi_catm.models.vitlstm import Vstm
 from csi_catm.data.dataset import TimeDataset
 from csi_catm.data.common import random_split_data_list
 

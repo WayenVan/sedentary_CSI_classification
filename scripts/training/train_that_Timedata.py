@@ -12,8 +12,8 @@ from tqdm import tqdm
 
 from torch.utils.data import DataLoader
 
-from ..data.common import random_split_data_list
-from ..data.dataset import TimeDataset
+from csi_catm.data.common import random_split_data_list
+from csi_catm.data.dataset import TimeDataset
 
 from csi_that.Model import HARTrans
 
