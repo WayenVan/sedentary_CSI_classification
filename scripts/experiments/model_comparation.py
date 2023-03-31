@@ -18,12 +18,12 @@ import torch
 
 data = torch.ones(size=(100, 1, 1, 30, 30))
 data_bvp = torch.ones(size=(30, 1, 1, 20, 20))
-data_that = torch.ones(size=(1, 3000, 90))
+data_that = torch.ones(size=(1, 300, 90))
 data_cnn = torch.ones(size=(1, 1, 3000, 60))
 
 reslstm = ResLSTM(d_model=128, input_size=(1, 30, 30), n_class=8, n_res_block=1, n_lstm_layer=4, channel_size=32, kernel_size=3)
 bvp = BvP(n_class=8, img_size=(1, 20, 20), gru_num_layers=4, gru_hidden_size=128)
-that = HARTrans(K=10, sample=1, n_seq=3000, input_dim=90, d_model=128, n_class=8, hlayers=4, vlayers=4, hheads=4, vheads=4)
+that = HARTrans(K=10, sample=1, n_seq=300, input_dim=90, d_model=128, n_class=8, hlayers=4, vlayers=4, hheads=4, vheads=4)
 cnn = CNN(128, n_classes=8, img_size=(1, 3000, 60))
 
 
