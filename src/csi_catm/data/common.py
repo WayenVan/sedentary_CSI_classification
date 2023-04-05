@@ -56,17 +56,5 @@ def random_split_data_list(data_list: list, test_ratio):
     return train_list, test_list
 
 
-    
-
-
-def print_parameters_grad(model: nn.Module):
-    named_parameters = model.named_parameters()
-    for name, parms in named_parameters:
-        print("--->name:", name, '--->grad_requires:', parms.requires_grad, '--->grad_value:', parms.grad)
-
-def print_parameters(model: nn.Module):
-    named_parameters = model.named_parameters()
-    for name, parms in named_parameters:
-        print("--->name:", name, '--->grad_requires:', parms.requires_grad, '--->parms_value:', parms)
-
-
+def collide_into_3channel(data_list: list):
+    pass

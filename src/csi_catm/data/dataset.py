@@ -13,7 +13,7 @@ class BvPDataset(Dataset):
     
     def __init__(self, path_to_data, data_list, num_class, T_MAX, img_size=(30, 30)) -> None:
         super().__init__()
-       # self.data_list = data_list
+        # self.data_list = data_list
         self.T_MAX = T_MAX
         self.path_to_data = path_to_data
         self.data_list = data_list
@@ -33,11 +33,10 @@ class BvPDataset(Dataset):
         data_1 = rearrange(data_1, '(c h) w s -> s c h w', c=1)
         data_1 = self.resize(data_1)
         data_1 = functional.normalize(data_1, dim=0)
-   
+        
         label_1 = functional.one_hot(tensor(label_1), self.num_class).type(torch.float64)
 
         return data_1, label_1
-
 
 class CatmDataset(Dataset):
     
@@ -46,7 +45,7 @@ class CatmDataset(Dataset):
         :param down_sample: down_sample for dimension(time, high, width) defaults to (1, 1, 1)
         """
         super().__init__()
-       # self.data_list = data_list
+        # self.data_list = data_list
         self.t_padding = t_padding
         self.path_to_data = path_to_data
         self.data_list = data_list
@@ -70,7 +69,7 @@ class CatmDataset(Dataset):
         
         data_1_tensor: torch.Tensor = torch.tensor(data_1, dtype=torch.float32)
         data_1_tensor = functional.normalize(data_1_tensor, dim=0)
-   
+        
         label_1 = functional.one_hot(tensor(label_1), self.num_class)
 
         return data_1_tensor, label_1
@@ -83,8 +82,7 @@ class CatmDataset(Dataset):
             else:
                 pad.append((0,0))         
         return np.pad(data, pad, mode='constant', constant_values=0)
-        
-    
+
 
 class TimeDataset(Dataset):
     
@@ -116,5 +114,4 @@ class TimeDataset(Dataset):
         label = torch.tensor(label)
         
         return data, label #[s, d], []
-        
         

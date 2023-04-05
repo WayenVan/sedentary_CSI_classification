@@ -37,7 +37,7 @@ class CNN(nn.Module):
             nn.Softmax(dim=-1)
         )
 
-    # @torchsnooper.snoop()
+
     def forward(self, x: torch.Tensor):
         """
         :param x [b, c, h, w]
