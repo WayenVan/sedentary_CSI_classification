@@ -107,7 +107,7 @@ if __name__ == "__main__":
             tbar.set_postfix({
                 'batch_accuracy': acu
             })
-                     
+
         #test
         accuracy_test = torchmetrics.Accuracy(task='multiclass', num_classes=args.nclass).to(device)
         

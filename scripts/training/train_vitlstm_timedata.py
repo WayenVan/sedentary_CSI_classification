@@ -23,16 +23,16 @@ from csi_catm.data.common import random_split_data_list
 @click.option('--dropout', default=0.1, type=float)
 @click.option('--load_dir', default=None, type=str)
 def main(data_root,
-         lr,
-         d_model,
-         d_emb,
-         img_size,
-         split_grid,
-         nhead,
-         num_encoder,
-         num_lstm_layers,
-         dropout,
-         load_dir):
+        lr,
+        d_model,
+        d_emb,
+        img_size,
+        split_grid,
+        nhead,
+        num_encoder,
+        num_lstm_layers,
+        dropout,
+        load_dir):
     """training using the"""
     
     

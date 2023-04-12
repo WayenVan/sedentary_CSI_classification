@@ -8,6 +8,7 @@ from torch.nn import functional
 import numpy as np
 import torchvision as tv
 from einops import rearrange
+from typing import List
 
 class BvPDataset(Dataset):
     
@@ -83,7 +84,6 @@ class CatmDataset(Dataset):
                 pad.append((0,0))         
         return np.pad(data, pad, mode='constant', constant_values=0)
 
-
 class TimeDataset(Dataset):
     
     def __init__(self, data_dir, data_list, num_classes, col_select = "dop_spec_ToF", norm = False) -> None:
@@ -115,3 +115,24 @@ class TimeDataset(Dataset):
         
         return data, label #[s, d], []
         
+class Catm3ChannelDataset(Dataset):
+    
+    def __init__(self, data_root: str, data_list: List[List[str]]) -> None:
+        super().__init__()
+        self._data_root = data_root
+        self._data_list = data_list
+        
+    def __len__(self):
+        
+    def __getitem__(self, index):
+        pass
+        return None
+    
+    def _padding_t(self, data: np.ndarray, padding_length):
+        pad = []
+        for index, dim in enumerate(data.shape):
+            if index == 0:
+                pad.append((padding_length-dim, 0))
+            else:
+                pad.append((0,0))         
+        return np.pad(data, pad, mode='constant', constant_values=0)

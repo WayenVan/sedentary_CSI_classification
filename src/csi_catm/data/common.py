@@ -5,7 +5,7 @@ import numpy as np
 import scipy.io as scio
 import torch.nn as nn
 from random import shuffle
-
+from typing import Tuple
 
 """----------util functions-------------------"""
 
@@ -55,6 +55,16 @@ def random_split_data_list(data_list: list, test_ratio):
     test_list = data_list[train_size:]
     return train_list, test_list
 
+def parse_catm_file_name(file_name: str) -> Tuple[int, int, int, int]:
+    """parser a name from catm dataset, for example, "user1-2-1-12.m" will be pasered into:
+    (user, action, channel, index), which is (1, 2, 1, 12)
+    """
+    splited = file_name.split('-')
+    
+    user = int(splited[0][4:])
+    action = int(splited[1])
+    channel = int(splited[2])
+    index = int(splited[3].split('.')[0])
+    
+    return user, action, channel, index
 
-def collide_into_3channel(data_list: list):
-    pass
