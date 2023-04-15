@@ -5,7 +5,7 @@ import numpy as np
 import scipy.io as scio
 import torch.nn as nn
 from random import shuffle
-from typing import Tuple
+from typing import Tuple, List, Dict
 
 """----------util functions-------------------"""
 
@@ -68,3 +68,24 @@ def parse_catm_file_name(file_name: str) -> Tuple[int, int, int, int]:
     
     return user, action, channel, index
 
+
+def aggregate_3channel(file_list: List[str]) -> List[List]:
+    """find 3 channel data for CATM dataset
+    :return: [[channel1, channe2, ...]]
+    """
+    d: Dict[str, List[str]] = {}
+    
+    for name in file_list:
+        user, action, channel,index = parse_catm_file_name(name)
+        label = '{}-{}-{}'.format(user, action, index)
+        if label not in d.keys():
+            d[label] = []
+        d[label].append(name)
+    
+    ret = list(d.values())
+    _ret = []
+    for names in ret:
+        if len(names) == 3:
+            item = sorted(names, key=lambda x: parse_catm_file_name(x)[-2])
+            _ret.append(item)
+    return _ret

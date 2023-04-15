@@ -44,7 +44,6 @@ if __name__ == "__main__":
     
     device = torch.device(args.device)
         
-        
     
     """prepare data
     """

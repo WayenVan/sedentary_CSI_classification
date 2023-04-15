@@ -8,7 +8,7 @@ from torch.nn import functional
 import numpy as np
 import torchvision as tv
 from einops import rearrange
-from typing import List
+from typing import List, Union
 
 class BvPDataset(Dataset):
     
@@ -117,16 +117,36 @@ class TimeDataset(Dataset):
         
 class Catm3ChannelDataset(Dataset):
     
-    def __init__(self, data_root: str, data_list: List[List[str]]) -> None:
+    def __init__(self, data_root: str, data_list: List[List[str]], t_padding: int, transform=None) -> None:
         super().__init__()
         self._data_root = data_root
-        self._data_list = data_list
+        self._data_list:  List[List[str]] = data_list
+        self._padding = t_padding
+        self._transform = transform
         
     def __len__(self):
+        return len(self._data_list)
         
     def __getitem__(self, index):
-        pass
-        return None
+        file_names_3c = self._data_list[index]
+        channels_data = []
+        for idx, channel_file in enumerate(file_names_3c):
+            assert channel_file.split('-')[-2] == str(idx + 1)
+            file_path = os.path.join(self._data_root, channel_file)
+            data: np.ndarray = scio.loadmat(file_path)['save_spect']
+            #[t, h, w]
+            data = data.astype(np.float32)
+            data = self._padding_t(data, self._padding)
+            channels_data.append(data)
+            
+        label = int(file_names_3c[0].split('-')[1]) - 1
+        
+        #[t, c, h, w]
+        x = np.stack(channels_data, axis=1)
+        if self._transform:
+            x = self._transform(x)
+
+        return x, label
     
     def _padding_t(self, data: np.ndarray, padding_length):
         pad = []
@@ -136,3 +156,5 @@ class Catm3ChannelDataset(Dataset):
             else:
                 pad.append((0,0))         
         return np.pad(data, pad, mode='constant', constant_values=0)
+    
+    

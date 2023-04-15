@@ -7,7 +7,7 @@ from torch.nn import Parameter
 import copy
 from einops import rearrange
 
-class ResLSTM(nn.Module):
+class ResRnn3C(nn.Module):
     
     def __init__(self, d_model: int, 
                 image_size: ImageSize,
@@ -34,9 +34,9 @@ class ResLSTM(nn.Module):
         ]
         self.cnn0 = nn.Sequential(*cnn_list)
         self.cnn1 = copy.deepcopy(self.cnn0)
-        self.cnn2 = copy.deepcopy(self.cnn2)
+        self.cnn2 = copy.deepcopy(self.cnn1)
         
-        self.gru = nn.GRU(d_model, d_model, n_rnn_layer, bidirectional = bidirectional, dropout=dropout, **kwargs)
+        self.gru = nn.GRU(d_model*3, d_model, n_rnn_layer, bidirectional = bidirectional, dropout=dropout, **kwargs)
         
         self.fc = nn.Sequential(
             nn.Linear(d_model, n_class),
@@ -52,15 +52,15 @@ class ResLSTM(nn.Module):
         """
         param: c channel with [time, batch, height, width]
         """
-        batch_size = c0.shape[0]
+        batch_size = c0.shape[1]
         #change to [time, batch, img_channel, height, width], where img_channel=1
         _c0 = rearrange(c0, 't b (c h) w -> (t b) c h w', c=1)
         _c1 = rearrange(c1, 't b (c h) w -> (t b) c h w', c=1)
         _c2 = rearrange(c2, 't b (c h) w -> (t b) c h w', c=1)
         
-        _c0 = self.cnn0(c0)
-        _c1 = self.cnn1(c1)
-        _c2 = self.cnn2(c2)
+        _c0 = self.cnn0(_c0)
+        _c1 = self.cnn1(_c1)
+        _c2 = self.cnn2(_c2)
         
         #c [(t b) d]
         x = torch.concatenate((_c0, _c1, _c2), dim=-1)

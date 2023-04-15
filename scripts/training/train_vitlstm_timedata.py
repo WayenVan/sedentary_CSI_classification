@@ -37,7 +37,7 @@ def main(data_root,
     
     
     model = create_model(d_model, d_emb, img_size, split_grid, nhead, num_encoder, d_emb, num_lstm_layers,
-                         load_dir=load_dir, dropout=dropout)
+            load_dir=load_dir, dropout=dropout)
 
     
 def load_data(data_dir: str, col_select: str, test_ratio=0.2) -> Tuple[Dataset, Dataset]:
@@ -68,4 +68,3 @@ def train(model: nn.Module , epoch: int):
 
 if __name__ == '__main__':
     main()
-   
