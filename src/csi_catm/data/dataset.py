@@ -63,7 +63,7 @@ class CatmDataset(Dataset):
         data_file_name = self.data_list[index]
         file_path = os.path.join(self.path_to_data,data_file_name)
         
-        data_1: np.ndarray = scio.loadmat(file_path)['save_spect']
+        data_1 = scio.loadmat(file_path)['save_spect']
         label_1 = int(data_file_name.split('-')[1]) - 1
         data_1 = data_1[::self.down_sample[0], ::self.down_sample[1], ::self.down_sample[2]]
         data_1 = self._padding_t(data_1, self.t_padding)

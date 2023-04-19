@@ -23,12 +23,12 @@ class ResRnn3C(nn.Module):
         
         assert kernel_size % 2 == 1, "kernel size must be odd"
         
-        cnn_list = [nn.Conv2d(image_size[0], channel_size, kernel_size, padding=(kernel_size-1)//2), nn.MaxPool2d((2, 2))]
+        cnn_list = [nn.Conv2d(image_size[0], channel_size, kernel_size, padding=(kernel_size-1)//2)]
         cnn_list = cnn_list + [ResBlock(channel_size, channel_size, channel_size, kernel_size) for i in range(n_res_block)]
         cnn_list = cnn_list + [
             nn.MaxPool2d((2, 2)),
             nn.Flatten(start_dim=-3, end_dim=-1),
-            nn.Linear(math.prod([channel_size, image_size[1]//4, image_size[2]//4]), d_model),
+            nn.Linear(math.prod([channel_size, image_size[1]//2, image_size[2]//2]), d_model),
             nn.ReLU(),
             nn.Dropout(dropout)
         ]

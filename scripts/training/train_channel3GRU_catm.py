@@ -13,11 +13,12 @@ from tqdm import tqdm
 import torch
 import torchmetrics
 from einops import rearrange
+import torch.nn.functional as F
 
 @click.command()
 @click.option('--data_root', default='dataset/CATM', type=str)
-@click.option('--lr', default=1e-3, type=float)
-@click.option('--batch', default=4, type=int)
+@click.option('--lr', default=1e-2, type=float)
+@click.option('--batch', default=16, type=int)
 @click.option('--epochs', default=100, type=int)
 @click.option('--test_ratio', default=0.3)
 @click.option('--device', default='cuda')
@@ -25,9 +26,9 @@ from einops import rearrange
 @click.option('--down_sample', nargs=2, default=(3, 3), help='down sample (height, width)')
 @click.option('--t_padding', default=100, type=int)
 @click.option('--img_size', nargs=3, type=int, default=(1, 30, 30), help='channel height width')
-@click.option('--d_model', default=8, type=int)
+@click.option('--d_model', default=256, type=int)
 @click.option('--n_rnn_layers', default=4, type=int)
-@click.option('--n_res_block', default=1, type=int)
+@click.option('--n_res_block', default=2, type=int)
 @click.option('--dropout', default=0.1, type=float)
 @click.option('--conv_channel', default=64)
 def main(data_root, 
@@ -61,6 +62,7 @@ def main(data_root,
     """    
     
     model = ResRnn3C(d_model, img_size, 8, n_res_block, n_rnn_layers, conv_channel, dropout=dropout).to(device)
+
     
     """training
     """
@@ -75,7 +77,7 @@ def main(data_root,
     log = open(os.path.join(model_save_dir, 'training.log'), 'w', 1)
     sys.stdout = log
     
-    opt = torch.optim.SGD(model.parameters(), lr=lr, momentum=0.9)
+    opt = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=0)
     loss_fn = torch.nn.CrossEntropyLoss()
     
     best_accuracy = 0.
@@ -91,26 +93,30 @@ def main(data_root,
             x, labels = batch_data
             x = rearrange(x, 'b t c h w -> c t b h w')
             x = x.to(device)
+            x = F.normalize(x, dim=0)
+            
             labels = labels.to(device)
-            y_pred = model(x[0], x[1], x[2])
+            y_pred = model(x[0], x[0], x[0])
             loss = loss_fn(y_pred, labels)
             loss.backward()
             
             opt.step()
             acu = accuracy_train(y_pred, labels).item()
             tbar.set_postfix({
-                'batch_accuracy': acu
+                'batch_accuracy': acu,
+                'batch_loss': loss.item()
             })
 
         #test
         accuracy_test = torchmetrics.Accuracy(task='multiclass', num_classes=8).to(device)
+        
         
         for index, batch_data in enumerate(test_loader):
             x, labels = batch_data
             x = rearrange(x, 'b t c h w -> c t b h w')
             x = x.to(device)
             labels = labels.to(device)
-            y_pred = model(x[0], x[1], x[2])
+            y_pred = model(x[0], x[0], x[0])
             accuracy_test.update(y_pred, labels)
         
         accu_test = accuracy_test.compute().item()
