@@ -2,11 +2,12 @@ import click
 import os
 import sys
 import json
+import numpy as np
+from torchinfo import summary
 
 from csi_catm.data.common import aggregate_3channel, random_split_data_list
-from csi_catm.data.dataset import Catm3ChannelDataset
-from csi_catm.models.channel3gru import ResRnn3C
-from csi_catm.data.transform import DownSample
+from csi_catm.data.dataset import Catm3ChannelDataset, CatmDataset
+from csi_catm.models.bvp import BvP
 from torch.utils.data import DataLoader
 
 from tqdm import tqdm
@@ -18,20 +19,18 @@ import torch.nn.functional as F
 @click.command()
 @click.option('--debug', default=0, type=int)
 @click.option('--data_root', default='dataset/CATM', type=str)
-@click.option('--lr', default=1e-9, type=float)
+@click.option('--lr', default=1e-5, type=float)
 @click.option('--batch', default=16, type=int)
 @click.option('--epochs', default=100, type=int)
 @click.option('--test_ratio', default=0.3)
 @click.option('--device', default='cuda')
-@click.option('--model_save_dir', default='models/channel3GRU')
-@click.option('--down_sample', nargs=2, default=(3, 3), help='down sample (height, width)')
+@click.option('--model_save_dir', default='models/bvp')
+@click.option('--down_sample', nargs=3, default=(1, 3, 3), help='down sample (height, width)')
 @click.option('--t_padding', default=100, type=int)
 @click.option('--img_size', nargs=3, type=int, default=(1, 30, 30), help='channel height width')
 @click.option('--d_model', default=256, type=int)
 @click.option('--n_rnn_layers', default=2, type=int)
-@click.option('--n_res_block', default=4, type=int)
 @click.option('--dropout', default=0.1, type=float)
-@click.option('--conv_channel', default=64)
 def main(
     debug,
     data_root, 
@@ -44,28 +43,26 @@ def main(
     d_model,
     n_rnn_layers,
     dropout,
-    n_res_block,
     device,
     model_save_dir,
-    conv_channel,
     down_sample):
     info = dict(locals())
+    # torch.set_printoptions(profile='full')
 
     file_list = os.listdir(data_root)
-    file_list = aggregate_3channel(file_list)
     
     train_list, test_list = random_split_data_list(file_list, test_ratio)
     
-    trans = DownSample(down_sample[0], down_sample[1])
-    train_set, test_set = Catm3ChannelDataset(data_root, train_list, t_padding, transform=trans), \
-        Catm3ChannelDataset(data_root, test_list, t_padding, transform=trans)
+    train_set, test_set = CatmDataset(data_root, train_list,num_class=8, t_padding=t_padding, down_sample=down_sample), \
+        CatmDataset(data_root, test_list, num_class=8, t_padding=t_padding, down_sample=down_sample)
+                    
     train_loader, test_loader = DataLoader(train_set, batch_size=batch), DataLoader(test_set, batch_size=batch)
     
     """Create model
     """    
     
-    model = ResRnn3C(d_model, img_size, 8, n_res_block, n_rnn_layers, conv_channel, dropout=dropout).to(device)
-
+    model = BvP(n_class=8, img_size=img_size, gru_num_layers=n_rnn_layers, linear_emb=d_model, gru_hidden_size=d_model, dropout=dropout).to(device)
+    summary(model, input_data=rearrange(train_set[0][0], 't (b c h) w -> t b c h w', b=1, c=1))
     
     """training
     """
@@ -85,21 +82,22 @@ def main(
     
     best_accuracy = 0.
     for epoch in range(epochs):
+        model.train(True)
         
         #train
         accuracy_train = torchmetrics.Accuracy(task='multiclass', num_classes=8).to(device)
         tbar = tqdm(train_loader, desc='epoch: '+str(epoch), file=sys.stdout)
         for index, batch_data in enumerate(tbar):           
-            opt.zero_grad()
+            # opt.zero_grad()
             
             #[b, t, c, h, w]
             x, labels = batch_data
-            x = rearrange(x, 'b t c h w -> c t b h w')
+            x = rearrange(x, 'b t (c h) w -> t b c h w', c=1)
             x = x.to(device)
             # x = F.normalize(x, dim=0)
             
             labels = labels.to(device)
-            y_pred = model(x[0], x[0], x[0])
+            y_pred = model(x)
             loss = loss_fn(y_pred, labels)
             loss.backward()
             
@@ -116,6 +114,7 @@ def main(
                 'batch_loss': loss.item()
             })
 
+        model.train(False)
         #test
         accuracy_test = torchmetrics.Accuracy(task='multiclass', num_classes=8).to(device)
         

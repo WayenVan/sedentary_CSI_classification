@@ -71,8 +71,6 @@ class CatmDataset(Dataset):
         data_1_tensor: torch.Tensor = torch.tensor(data_1, dtype=torch.float32)
         data_1_tensor = functional.normalize(data_1_tensor, dim=0)
         
-        label_1 = functional.one_hot(tensor(label_1), self.num_class)
-
         return data_1_tensor, label_1
     
     def _padding_t(self, data: np.ndarray, padding_length):

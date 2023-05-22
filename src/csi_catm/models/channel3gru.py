@@ -46,7 +46,7 @@ class ResRnn3C(nn.Module):
         
         
         d = 2 if bidirectional else 1
-        self.h0 = Parameter(torch.zeros((d*n_rnn_layer, d_model), requires_grad=True))
+        self.h0 = Parameter(torch.rand((d*n_rnn_layer, d_model), requires_grad=True))
 
     def forward(self, c0: torch.Tensor, c1: torch.Tensor, c2: torch.Tensor):
         """
@@ -65,7 +65,11 @@ class ResRnn3C(nn.Module):
         #c [(t b) d]
         x = torch.concatenate((_c0, _c1, _c2), dim=-1)
         x = rearrange(x, '(t b) d -> t b d', b=batch_size)
-        _, hn = self.gru(x)
+        
+        h0 = torch.unsqueeze(self.h0, 1)
+        h0 = h0.expand(-1, batch_size, -1)
+        h0 = h0.contiguous()
+        _, hn = self.gru(x, h0)
         return self.fc(hn[-1, :, :])
     
     

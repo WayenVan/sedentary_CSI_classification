@@ -36,7 +36,7 @@ class BvP(nn.Module):
             nn.ReLU()
         )
 
-        self.h0 = Parameter(torch.rand((gru_num_layers, gru_hidden_size), requires_grad=True))
+        self.h0 = Parameter(torch.zeros(gru_num_layers ,gru_hidden_size))
         self.gru = nn.GRU(linear_emb, gru_hidden_size, num_layers=gru_num_layers, dropout=dropout)
         
         self.fc2 = nn.Sequential(
