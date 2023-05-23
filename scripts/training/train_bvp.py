@@ -21,15 +21,15 @@ import torch.nn.functional as F
 @click.option('--data_root', default='dataset/CATM', type=str)
 @click.option('--lr', default=1e-5, type=float)
 @click.option('--batch', default=16, type=int)
-@click.option('--epochs', default=100, type=int)
+@click.option('--epochs', default=50, type=int)
 @click.option('--test_ratio', default=0.3)
 @click.option('--device', default='cuda')
 @click.option('--model_save_dir', default='models/bvp')
 @click.option('--down_sample', nargs=3, default=(1, 3, 3), help='down sample (height, width)')
 @click.option('--t_padding', default=100, type=int)
 @click.option('--img_size', nargs=3, type=int, default=(1, 30, 30), help='channel height width')
-@click.option('--d_model', default=256, type=int)
-@click.option('--n_rnn_layers', default=2, type=int)
+@click.option('--d_model', default=64, type=int)
+@click.option('--n_rnn_layers', default=1, type=int)
 @click.option('--dropout', default=0.1, type=float)
 def main(
     debug,
@@ -60,7 +60,6 @@ def main(
     
     """Create model
     """    
-    
     model = BvP(n_class=8, img_size=img_size, gru_num_layers=n_rnn_layers, linear_emb=d_model, gru_hidden_size=d_model, dropout=dropout).to(device)
     summary(model, input_data=rearrange(train_set[0][0], 't (b c h) w -> t b c h w', b=1, c=1))
     
@@ -69,7 +68,6 @@ def main(
     info['train_set'] = train_list
     info['test_set'] = test_list
     
-    
     os.makedirs(model_save_dir, exist_ok=True)
     with open(os.path.join(model_save_dir, 'info.json'), 'w') as f:
         json.dump(info, f)
@@ -77,29 +75,29 @@ def main(
     log = open(os.path.join(model_save_dir, 'training.log'), 'w', 1)
     sys.stdout = log
     
-    opt = torch.optim.SGD(model.parameters(), lr=lr)
-    loss_fn = torch.nn.CrossEntropyLoss()
+    opt = torch.optim.Adam(model.parameters(), lr=lr)
+    loss_fn = torch.nn.NLLLoss(reduction='mean')
     
     best_accuracy = 0.
     for epoch in range(epochs):
         model.train(True)
         
-        #train
+        """on begin of train"""
         accuracy_train = torchmetrics.Accuracy(task='multiclass', num_classes=8).to(device)
         tbar = tqdm(train_loader, desc='epoch: '+str(epoch), file=sys.stdout)
         for index, batch_data in enumerate(tbar):           
-            # opt.zero_grad()
             
             #[b, t, c, h, w]
             x, labels = batch_data
             x = rearrange(x, 'b t (c h) w -> t b c h w', c=1)
             x = x.to(device)
-            # x = F.normalize(x, dim=0)
             
             labels = labels.to(device)
             y_pred = model(x)
             loss = loss_fn(y_pred, labels)
+            opt.zero_grad()
             loss.backward()
+            opt.step()
             
             if debug:
                 for name, parms in model.named_parameters():
@@ -107,24 +105,23 @@ def main(
                         continue
                     print("-->name: {} -->grad_requirs: {} -->grad_value: {}".format(name, parms.requires_grad, parms.grad))
             
-            opt.step()
             acu = accuracy_train(y_pred, labels).item()
             tbar.set_postfix({
-                'batch_accuracy': acu,
-                'batch_loss': loss.item()
+                'batch_accuracy': str(acu),
+                'batch_loss': str(loss.item())
             })
 
         model.train(False)
-        #test
+        """on begin of test"""
         accuracy_test = torchmetrics.Accuracy(task='multiclass', num_classes=8).to(device)
         
         
         for index, batch_data in enumerate(test_loader):
             x, labels = batch_data
-            x = rearrange(x, 'b t c h w -> c t b h w')
+            x = rearrange(x, 'b t (c h) w -> t b c h w', c=1)
             x = x.to(device)
             labels = labels.to(device)
-            y_pred = model(x[0], x[0], x[0])
+            y_pred = model(x)
             accuracy_test.update(y_pred, labels)
         
         accu_test = accuracy_test.compute().item()
@@ -136,7 +133,7 @@ def main(
             print('best model saved', end='')
             torch.save(model.state_dict(), os.path.join(model_save_dir, 'model'))
             
-        
+        #
     sys.stdout.close()
             
 

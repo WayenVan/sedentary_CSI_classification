@@ -12,9 +12,10 @@ class BvP(nn.Module):
         super(BvP, self).__init__()
     
         self.cnn = nn.Sequential(
-            nn.Conv2d(img_size[0], 64, (3, 3)),
+            nn.Conv2d(img_size[0], 16, (3, 3), padding='same'),
             nn.ReLU(),
-            nn.Conv2d(64, 64, (3, 3)),
+            nn.MaxPool2d((2, 2)),
+            nn.Conv2d(16, 16, (3, 3), padding='same'),
             nn.ReLU(),
             nn.MaxPool2d((2, 2))
         )
@@ -30,7 +31,7 @@ class BvP(nn.Module):
         self.fc1 = nn.Sequential(
             nn.Linear(linear_input_shape, linear_emb),
             nn.Dropout(dropout),
-            nn.ReLU(),
+            # nn.ReLU(),
             nn.Linear(linear_emb, linear_emb),
             nn.Dropout(dropout),
             nn.ReLU()
@@ -38,12 +39,15 @@ class BvP(nn.Module):
 
         self.h0 = Parameter(torch.zeros(gru_num_layers ,gru_hidden_size))
         self.gru = nn.GRU(linear_emb, gru_hidden_size, num_layers=gru_num_layers, dropout=dropout)
+        self.init_gru(self.gru)
         
         self.fc2 = nn.Sequential(
             nn.Linear(gru_hidden_size, n_class),
             nn.Dropout(dropout),
-            nn.Softmax(dim=-1)
+            nn.LogSoftmax(dim=-1)
         )
+
+        self.apply(self.init_parameters)
 
     # @torchsnooper.snoop()
     def forward(self, x: torch.Tensor):
@@ -69,6 +73,27 @@ class BvP(nn.Module):
         return output
 
 
+    @staticmethod
+    def init_parameters(module):
+        if isinstance(module, nn.Linear):
+            nn.init.xavier_normal_(module.weight)
+            nn.init.constant_(module.bias, 0)
+            
+        elif isinstance(module, nn.Conv2d):
+            nn.init.kaiming_normal_(module.weight, mode='fan_out', nonlinearity='relu')
+
+        elif isinstance(module, nn.BatchNorm2d):
+            nn.init.constant_(module.weight, 1)
+            nn.init.constant_(module.bias, 0)        
+        
+    @staticmethod
+    def init_gru(module: nn.GRU):
+        for name, param in module.named_parameters():
+            if name.startswith('weight'):
+                nn.init.xavier_uniform_(param)
+            else:
+                nn.init.zeros_(param)
+        
     def _calculate_output_shape(self, input, kernel_size, stride, padding=(0, 0), dilation=(1, 1)):
 
         h = input[0]

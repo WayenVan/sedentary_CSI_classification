@@ -66,10 +66,10 @@ class CatmDataset(Dataset):
         data_1 = scio.loadmat(file_path)['save_spect']
         label_1 = int(data_file_name.split('-')[1]) - 1
         data_1 = data_1[::self.down_sample[0], ::self.down_sample[1], ::self.down_sample[2]]
-        data_1 = self._padding_t(data_1, self.t_padding)
+        # data_1 = self._padding_t(data_1, self.t_padding)
         
         data_1_tensor: torch.Tensor = torch.tensor(data_1, dtype=torch.float32)
-        data_1_tensor = functional.normalize(data_1_tensor, dim=0)
+        # data_1_tensor = functional.normalize(data_1_tensor, dim=0)
         
         return data_1_tensor, label_1
     
