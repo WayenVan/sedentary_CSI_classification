@@ -4,21 +4,20 @@ from torch.utils.data import Dataset
 from torch import tensor
 import scipy.io as scio
 from .common import zero_padding, load_data_BvP
-from torch.nn import functional
 import numpy as np
 import torchvision as tv
 from einops import rearrange
 from typing import List, Union
+import torch.nn.functional as F
 
 class BvPDataset(Dataset):
     
-    def __init__(self, path_to_data, data_list, num_class, T_MAX, img_size=(30, 30)) -> None:
+    def __init__(self, path_to_data, data_list, T_MAX, img_size=(20, 20)) -> None:
         super().__init__()
         # self.data_list = data_list
         self.T_MAX = T_MAX
         self.path_to_data = path_to_data
         self.data_list = data_list
-        self.num_class = num_class
         self.img_size = img_size
         self.resize = tv.transforms.Resize(img_size)
 
@@ -28,16 +27,13 @@ class BvPDataset(Dataset):
     def __getitem__(self, index):
 
         data_file_name = self.data_list[index]
-        data_1, label_1 = load_data_BvP(self.path_to_data, data_file_name, self.T_MAX)
-
-        data_1 = torch.tensor(data_1)
-        data_1 = rearrange(data_1, '(c h) w s -> s c h w', c=1)
-        data_1 = self.resize(data_1)
-        data_1 = functional.normalize(data_1, dim=0)
+        data, label = load_data_BvP(self.path_to_data, data_file_name, self.T_MAX)
+        data = rearrange(data, 'h w t -> t h w')
+        data = torch.tensor(data, dtype=torch.float32)
+        data = self.resize(data)
+        data = F.normalize(data, dim=-1)
         
-        label_1 = functional.one_hot(tensor(label_1), self.num_class).type(torch.float64)
-
-        return data_1, label_1
+        return data, label
 
 class CatmDataset(Dataset):
     
@@ -66,10 +62,15 @@ class CatmDataset(Dataset):
         data_1 = scio.loadmat(file_path)['save_spect']
         label_1 = int(data_file_name.split('-')[1]) - 1
         data_1 = data_1[::self.down_sample[0], ::self.down_sample[1], ::self.down_sample[2]]
-        # data_1 = self._padding_t(data_1, self.t_padding)
+        data_1 =self._padding_t(data_1, self.t_padding)
         
         data_1_tensor: torch.Tensor = torch.tensor(data_1, dtype=torch.float32)
-        # data_1_tensor = functional.normalize(data_1_tensor, dim=0)
+        
+        #normalize
+        std = torch.std(data_1_tensor, (-1, -2), keepdim=True)
+        mean = torch.mean(data_1_tensor, (-1, -2), keepdim=True)
+        
+        data_1_tensor = (data_1_tensor - std) / (mean + 1e-8)
         
         return data_1_tensor, label_1
     
@@ -107,7 +108,7 @@ class TimeDataset(Dataset):
         #[s, d]
         data = torch.tensor(data)
         if self.norm:
-            data = functional.normalize(data, dim = 0)
+            data = F.normalize(data, dim = 0)
         #[]
         label = torch.tensor(label)
         
@@ -132,6 +133,7 @@ class Catm3ChannelDataset(Dataset):
             assert channel_file.split('-')[-2] == str(idx + 1)
             file_path = os.path.join(self._data_root, channel_file)
             data: np.ndarray = scio.loadmat(file_path)['save_spect']
+
             #[t, h, w]
             data = data.astype(np.float32)
             data = self._padding_t(data, self._padding)
@@ -141,8 +143,14 @@ class Catm3ChannelDataset(Dataset):
         
         #[t, c, h, w]
         x = np.stack(channels_data, axis=1)
+        
         if self._transform:
             x = self._transform(x)
+
+        #standardization
+        mean = np.mean(x, (-2, -1), keepdims=True)
+        std = np.std(x, (-2, -1), keepdims=True)
+        x = (x - std) / (mean + 1e-8)
 
         return x, label
     

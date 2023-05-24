@@ -5,7 +5,7 @@ from ..csi_typing import ImageSize
 import math
 from torch.nn import Parameter
 import copy
-from einops import rearrange
+from einops import rearrange, repeat
 
 class ResRnn3C(nn.Module):
     
@@ -29,7 +29,7 @@ class ResRnn3C(nn.Module):
             nn.MaxPool2d((2, 2)),
             nn.Flatten(start_dim=-3, end_dim=-1),
             nn.Linear(math.prod([channel_size, image_size[1]//2, image_size[2]//2]), d_model),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Dropout(dropout)
         ]
         self.cnn0 = nn.Sequential(*cnn_list)
@@ -41,7 +41,7 @@ class ResRnn3C(nn.Module):
         self.fc = nn.Sequential(
             nn.Linear(d_model, n_class),
             nn.Dropout(dropout),
-            nn.Softmax(dim = -1)
+            nn.LogSoftmax(dim = -1)
         )
         
         
@@ -66,9 +66,10 @@ class ResRnn3C(nn.Module):
         x = torch.concatenate((_c0, _c1, _c2), dim=-1)
         x = rearrange(x, '(t b) d -> t b d', b=batch_size)
         
-        h0 = torch.unsqueeze(self.h0, 1)
-        h0 = h0.expand(-1, batch_size, -1)
-        h0 = h0.contiguous()
+        # h0 = torch.unsqueeze(self.h0, 1)
+        h0 = repeat(self.h0, 'l emb -> l b emb', b=batch_size).contiguous()
+        # h0 = h0.expand(-1, batch_size, -1)
+        # h0 = h0.contiguous()
         _, hn = self.gru(x, h0)
         return self.fc(hn[-1, :, :])
     
@@ -93,8 +94,8 @@ class ResBlock(nn.Module):
         self.batchnorm2 = nn.BatchNorm2d(out_size)
 
     def convblock(self, x):
-        x = f.relu(self.batchnorm1(self.conv1(x)))
-        x = f.relu(self.batchnorm2(self.conv2(x)))
+        x = f.leaky_relu(self.batchnorm1(self.conv1(x)))
+        x = f.leaky_relu(self.batchnorm2(self.conv2(x)))
         return x
 
     """

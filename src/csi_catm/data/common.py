@@ -48,7 +48,7 @@ def load_data_timeData(path_to_dataset, file_name):
     return data, label
 
 def random_split_data_list(data_list: list, test_ratio):
-    # shuffle(data_list)
+    shuffle(data_list)
     test_size = round(len(data_list)*test_ratio)
     train_size = len(data_list) - test_size
     train_list = data_list[:train_size]

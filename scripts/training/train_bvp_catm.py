@@ -19,15 +19,15 @@ import torch.nn.functional as F
 @click.command()
 @click.option('--debug', default=0, type=int)
 @click.option('--data_root', default='dataset/CATM', type=str)
-@click.option('--lr', default=1e-5, type=float)
-@click.option('--batch', default=16, type=int)
+@click.option('--lr', default=1e-4, type=float)
+@click.option('--batch', default=32, type=int)
 @click.option('--epochs', default=50, type=int)
 @click.option('--test_ratio', default=0.3)
-@click.option('--device', default='cuda')
+@click.option('--device', default='cpu')
 @click.option('--model_save_dir', default='models/bvp')
-@click.option('--down_sample', nargs=3, default=(1, 3, 3), help='down sample (height, width)')
+@click.option('--down_sample', nargs=3, default=(2, 2, 2), help='down sample (time, height, width)')
 @click.option('--t_padding', default=100, type=int)
-@click.option('--img_size', nargs=3, type=int, default=(1, 30, 30), help='channel height width')
+@click.option('--img_size', nargs=3, type=int, default=(1, 45, 45), help='channel height width')
 @click.option('--d_model', default=64, type=int)
 @click.option('--n_rnn_layers', default=1, type=int)
 @click.option('--dropout', default=0.1, type=float)
@@ -61,7 +61,7 @@ def main(
     """Create model
     """    
     model = BvP(n_class=8, img_size=img_size, gru_num_layers=n_rnn_layers, linear_emb=d_model, gru_hidden_size=d_model, dropout=dropout).to(device)
-    summary(model, input_data=rearrange(train_set[0][0], 't (b c h) w -> t b c h w', b=1, c=1))
+    summary(model, input_data=rearrange(train_set[0][0], 't (b c h) w -> t b c h w', b=1, c=1), device=device)
     
     """training
     """
@@ -70,7 +70,7 @@ def main(
     
     os.makedirs(model_save_dir, exist_ok=True)
     with open(os.path.join(model_save_dir, 'info.json'), 'w') as f:
-        json.dump(info, f)
+        json.dump(info, f, indent=4)
         
     log = open(os.path.join(model_save_dir, 'training.log'), 'w', 1)
     sys.stdout = log

@@ -10,13 +10,14 @@ class BvP(nn.Module):
     
     def __init__(self, n_class, img_size, gru_num_layers, linear_emb = 64, gru_hidden_size=64, dropout=0.1) -> None:
         super(BvP, self).__init__()
-    
+        self.linear_emb = linear_emb
+        self.n_rnn_layers = gru_num_layers
         self.cnn = nn.Sequential(
             nn.Conv2d(img_size[0], 16, (3, 3), padding='same'),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.MaxPool2d((2, 2)),
             nn.Conv2d(16, 16, (3, 3), padding='same'),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.MaxPool2d((2, 2))
         )
 
@@ -26,15 +27,15 @@ class BvP(nn.Module):
         tmp = torch.rand([1, img_size[0], img_size[1], img_size[2]]) 
         cnn_output = self.cnn(tmp)
         cnn_output = self.flatten(cnn_output)
-        linear_input_shape = cnn_output.size()[-1]
+        self.cnn_out_dim = cnn_output.size()[-1]
 
         self.fc1 = nn.Sequential(
-            nn.Linear(linear_input_shape, linear_emb),
+            nn.Linear(self.cnn_out_dim, linear_emb),
             nn.Dropout(dropout),
             # nn.ReLU(),
             nn.Linear(linear_emb, linear_emb),
             nn.Dropout(dropout),
-            nn.ReLU()
+            nn.LeakyReLU()
         )
 
         self.h0 = Parameter(torch.zeros(gru_num_layers ,gru_hidden_size))
@@ -54,7 +55,10 @@ class BvP(nn.Module):
         """
         [s, b, c, h, w]
         """
+        size = list(x.size())
         batch_size = x.size()[1]
+        seqence_length = x.size()[0]
+        
 
         #time distributed
         x = rearrange(x, 's b c h w -> (s b) c h w')
@@ -64,10 +68,13 @@ class BvP(nn.Module):
         x = rearrange(x, '(s b) emb-> s b emb', b=batch_size)
 
         #create h0
-        h0 = rearrange(self.h0, 'l (b emb) -> l b emb', b=1)
-        h0 = h0.expand(-1, batch_size, -1).contiguous()
-        
-        
+        # h0 = torch.unsqueeze(self.h0, dim=1)
+        # h0 = rearrange(self.h0, 'l (b emb) -> l b emb', b=1)
+        # h0 = h0.expand(-1, batch_size, -1).contiguous()
+        # h0 = h0.reshape(self.n_rnn_layers, batch_size, self.linear_emb)
+
+        device = next(self.parameters()).device
+        h0 = torch.zeros(self.n_rnn_layers, batch_size, self.linear_emb).to(device)
         _, hn= self.gru(x, h0)
         output = self.fc2(hn[-1, :, :])
         return output
