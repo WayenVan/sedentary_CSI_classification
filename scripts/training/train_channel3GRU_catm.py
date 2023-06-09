@@ -21,7 +21,7 @@ import torch.nn.functional as F
 @click.option('--lr', default=1e-9, type=float)
 @click.option('--batch', default=32, type=int)
 @click.option('--epochs', default=50, type=int)
-@click.option('--test_ratio', default=0.3)
+@click.option('--test_ratio', default=0.2)
 @click.option('--device', default='cuda')
 @click.option('--model_save_dir', default='models/channel3GRU_catm')
 @click.option('--down_sample', nargs=3, default=(2, 2, 2), help='downsample in dimension (time, height, width)')

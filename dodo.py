@@ -26,24 +26,10 @@ def task_train_bvp_catm():
         '--debug 0 '+
         '--batch 32 '+
         '--lr 0.001 '+
-        '--d_model 128 '+
-        '--epochs 50 '+
+        '--d_model 64 '+
+        '--epochs 100 '+
         '--dropout 0.1 '
     )
-def task_train_bvp_lr():
-    for lr in [.01, .05, .005, .001, .0005]:
-        yield cmd(
-            envs +
-            'python3 scripts/training/train_bvp_catm.py '+
-            '--epochs 40 '+
-            '--debug 0 '+
-            '--batch 64 '+
-            '--lr {} '.format(lr)+
-            '--dropout 0.1 '+
-            '--model_save_dir models/bvp_catm_lr{} '.format(lr),
-            
-            name='lr{}'.format(lr)
-        )
 
 def task_train_bvp_bvp():
     return cmd(
@@ -64,8 +50,8 @@ def task_train_3chanel_catm():
         'python3 scripts/training/train_channel3GRU_catm.py '+
         '--debug 0 '+
         '--batch 32 '+
-        '--lr 0.001 '+
+        '--lr 0.005 '+
         '--d_model 64 '+
-        '--epochs 50 '+
+        '--epochs 100 '+
         '--dropout 0.1 '
     )

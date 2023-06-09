@@ -24,7 +24,7 @@ import torch.nn.functional as F
 @click.option('--epochs', default=50, type=int)
 @click.option('--test_ratio', default=0.3)
 @click.option('--device', default='cpu')
-@click.option('--model_save_dir', default='models/bvp')
+@click.option('--model_save_dir', default='models/bvp_catm')
 @click.option('--down_sample', nargs=3, default=(2, 2, 2), help='down sample (time, height, width)')
 @click.option('--t_padding', default=100, type=int)
 @click.option('--img_size', nargs=3, type=int, default=(1, 45, 45), help='channel height width')
