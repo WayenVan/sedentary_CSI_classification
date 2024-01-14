@@ -21,6 +21,7 @@ class ResLSTM(nn.Module):
                  n_res_block: int, 
                  n_lstm_layer: int, 
                  channel_size: int, 
+                 freezer = None,
                  kernel_size: int = 3,
                  bidirectional: bool = False,
                  dropout: float = 0.1,
@@ -34,7 +35,7 @@ class ResLSTM(nn.Module):
              nn.MaxPool2d((2, 2)),
             nn.Flatten(start_dim=-3, end_dim=-1),
             nn.Linear(math.prod([channel_size, input_size[1]//4, input_size[2]//4]), d_model),
-            nn.ReLU(),
+            nn.LeakyReLU(),
             nn.Dropout(dropout)
         ]
         self.cnn = nn.Sequential(*cnn_list)
@@ -47,12 +48,13 @@ class ResLSTM(nn.Module):
             nn.Softmax(dim = -1)
         )
         
-        
         d = 2 if bidirectional else 1
         self.c0 = Parameter(torch.zeros((d*n_lstm_layer, d_model), requires_grad=True))
         self.h0 = Parameter(torch.zeros((d*n_lstm_layer, d_model), requires_grad=True))
 
-
+        if freezer is not None:
+            freezer(self)
+        
 
     def forward(self, x: torch.Tensor):
         
@@ -68,8 +70,7 @@ class ResLSTM(nn.Module):
         _, (hn, cn) = self.lstm(x, (_h0, _c0))
         output = hn[-1, :, :]
         output = self.fc(output)
-
-        return output
+        return F.log_softmax(output, dim=-1)
 
 
 

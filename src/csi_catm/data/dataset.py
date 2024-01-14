@@ -37,13 +37,12 @@ class BvPDataset(Dataset):
 
 class CatmDataset(Dataset):
     
-    def __init__(self, path_to_data, data_list, num_class, t_padding, down_sample=(1, 1, 1)) -> None:
+    def __init__(self, path_to_data, data_list, num_class, down_sample=(1, 1, 1)) -> None:
         """
         :param down_sample: down_sample for dimension(time, high, width) defaults to (1, 1, 1)
         """
         super().__init__()
         # self.data_list = data_list
-        self.t_padding = t_padding
         self.path_to_data = path_to_data
         self.data_list = data_list
         self.num_class = num_class
@@ -62,7 +61,6 @@ class CatmDataset(Dataset):
         data_1 = scio.loadmat(file_path)['save_spect']
         label_1 = int(data_file_name.split('-')[1]) - 1
         data_1 = data_1[::self.down_sample[0], ::self.down_sample[1], ::self.down_sample[2]]
-        data_1 =self._padding_t(data_1, self.t_padding)
         
         data_1_tensor: torch.Tensor = torch.tensor(data_1, dtype=torch.float32)
         

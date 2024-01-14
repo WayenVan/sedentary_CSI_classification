@@ -1,5 +1,6 @@
 .doit.db
-
+.old
+outputs
 #self 
 /dataset/
 /saved_models/

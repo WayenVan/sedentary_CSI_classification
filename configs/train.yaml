@@ -1,0 +1,50 @@
+data_root: dataset/CATM
+val_ratio: 0.3
+device: cuda
+epoch: 70
+down_sample: [1, 3, 3]
+
+model:
+  _target_: csi_catm.models.reslstm.ResLSTM
+  d_model: 128
+  input_size: [1, 30, 30]
+  n_class: 8
+  n_res_block: 1
+  n_lstm_layer: 1
+  channel_size: 64
+
+optimizer:
+  _target_: torch.optim.Adam
+  lr: 1e-2
+
+loss_fn:
+  _target_: torch.nn.NLLLoss
+
+trainner:
+  _target_: csi_catm.engines.trainner.Trainner
+  device: ${device}
+  loss: ${loss_fn}
+
+
+inferencer:
+  _target_: csi_catm.engines.inferencer.Inferencer
+  device: ${device}
+
+data: 
+  train_loader:
+    _target_: torch.utils.data.dataloader.DataLoader
+    batch_size: 16
+    dataset: 
+      _target_: csi_catm.data.dataset.CatmDataset
+      path_to_data: ${data_root}
+      num_class: 8
+      down_sample: ${down_sample}
+
+  val_loader:
+    _target_: torch.utils.data.dataloader.DataLoader
+    batch_size: 16
+    dataset: 
+      _target_: csi_catm.data.dataset.CatmDataset
+      path_to_data: ${data_root}
+      num_class: 8
+      down_sample: ${down_sample}
