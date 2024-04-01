@@ -1,0 +1,5 @@
+trainner:
+  _target_: csi_catm.engines.trainner.Trainner
+
+inferencer:
+  _target_: csi_catm.engines.inferencer.Inferencer

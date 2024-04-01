@@ -1,0 +1,9 @@
+train:
+  _target_: torch.utils.data.dataloader.DataLoader
+  batch_size: 32
+  num_workers: 4
+
+val:
+  _target_: torch.utils.data.dataloader.DataLoader
+  batch_size: 64
+  num_workers: 4

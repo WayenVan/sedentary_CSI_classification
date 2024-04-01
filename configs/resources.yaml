@@ -1,0 +1,4 @@
+resnet_cfg: resources/resnet/resnet18.py
+resnet_ckpt: resources/resnet/resnet18_8xb32_in1k_20210831-fbbb1da6.pth
+
+data_root: /home/jingyan/Documents/sedentary_CSI_classification/dataset/CATM

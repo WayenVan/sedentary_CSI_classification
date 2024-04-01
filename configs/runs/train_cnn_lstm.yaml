@@ -1,0 +1,27 @@
+# @package _global_
+
+defaults:
+  - /resources@_global_
+  - /hydra: no_output
+  - /data/dataset: defaults
+  - /data/loader: defaults
+  - /transform: defaults
+  - /engines: defaults
+  - /model: cnn_lstm
+  - /loss: nll
+  - /lr_scheduler: multistep
+  - /optimizer: defaults
+
+seed: 3314
+val_ratio: 0.3
+epoch: 100
+
+  
+load_weights: False
+optimizer:
+  lr: 2e-4
+
+lr_scheduler:
+  milestones: [50, 100]
+  gamma: 0.5
+

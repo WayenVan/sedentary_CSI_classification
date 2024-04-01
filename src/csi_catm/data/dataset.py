@@ -37,7 +37,7 @@ class BvPDataset(Dataset):
 
 class CatmDataset(Dataset):
     
-    def __init__(self, path_to_data, data_list, num_class, down_sample=(1, 1, 1)) -> None:
+    def __init__(self, path_to_data, data_list, num_class, down_sample=(1, 1, 1), transform=None) -> None:
         """
         :param down_sample: down_sample for dimension(time, high, width) defaults to (1, 1, 1)
         """
@@ -47,6 +47,7 @@ class CatmDataset(Dataset):
         self.data_list = data_list
         self.num_class = num_class
         self.down_sample = down_sample
+        self.t = transform
         
     def __len__(self):
         return len(self.data_list)
@@ -60,17 +61,12 @@ class CatmDataset(Dataset):
         
         data_1 = scio.loadmat(file_path)['save_spect']
         label_1 = int(data_file_name.split('-')[1]) - 1
-        data_1 = data_1[::self.down_sample[0], ::self.down_sample[1], ::self.down_sample[2]]
+        data_1: np.ndarray = data_1.astype('float32')
         
-        data_1_tensor: torch.Tensor = torch.tensor(data_1, dtype=torch.float32)
+        if self.t is not None:
+            data_1 = self.t(data_1)
         
-        #normalize
-        std = torch.std(data_1_tensor, (-1, -2), keepdim=True)
-        mean = torch.mean(data_1_tensor, (-1, -2), keepdim=True)
-        
-        data_1_tensor = (data_1_tensor - std) / (mean + 1e-8)
-        
-        return data_1_tensor, label_1
+        return data_1,np.array(label_1, dtype='int64')
     
     def _padding_t(self, data: np.ndarray, padding_length):
         pad = []

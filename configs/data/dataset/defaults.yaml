@@ -1,0 +1,11 @@
+train:
+    _target_: csi_catm.data.dataset.CatmDataset
+    path_to_data: ${data_root}
+    num_class: 8
+    transform: ${transform}
+
+val: 
+    _target_: csi_catm.data.dataset.CatmDataset
+    path_to_data: ${data_root}
+    num_class: 8
+    transform: ${transform}

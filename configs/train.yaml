@@ -15,7 +15,7 @@ model:
 
 optimizer:
   _target_: torch.optim.Adam
-  lr: 1e-2
+  lr: 4e-2
 
 loss_fn:
   _target_: torch.nn.NLLLoss
@@ -33,7 +33,7 @@ inferencer:
 data: 
   train_loader:
     _target_: torch.utils.data.dataloader.DataLoader
-    batch_size: 16
+    batch_size: 128
     dataset: 
       _target_: csi_catm.data.dataset.CatmDataset
       path_to_data: ${data_root}
@@ -42,7 +42,7 @@ data:
 
   val_loader:
     _target_: torch.utils.data.dataloader.DataLoader
-    batch_size: 16
+    batch_size: 64
     dataset: 
       _target_: csi_catm.data.dataset.CatmDataset
       path_to_data: ${data_root}

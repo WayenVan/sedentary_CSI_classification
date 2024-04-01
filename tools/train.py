@@ -1,4 +1,5 @@
 import hydra
+from hydra.core import hydra_config
 from omegaconf import DictConfig
 import torch
 import os
@@ -21,8 +22,9 @@ def main(cfg: DictConfig):
     # torch.manual_seed(cfg.seed)
     script = os.path.abspath(__file__)
     
-    shutil.copyfile(script, 'script.py')
+    shutil.copyfile(script, os.path.join('script.py'))
     logger.info('building model and dataloaders')
+    output_dir = hydra_config.HydraConfig.get().runtime.output_dir
     
     file_list = os.listdir(cfg.data_root)
     train_list, test_list = random_split_data_list(file_list, cfg.val_ratio)
@@ -46,7 +48,7 @@ def main(cfg: DictConfig):
         accu = inferencer.do_inference(model, val_loader)
         if accu > best_accu:
             best_accu = accu
-            torch.save(model, 'model.pth')
+            torch.save(model, os.path.join(output_dir, 'model.pth'))
             logger.info(f'best model saved')
         logger.info(f'finish one epoch')
         
