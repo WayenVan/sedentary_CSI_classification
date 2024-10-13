@@ -1,61 +1,45 @@
 import torch
-from typing import List
 import torch.nn as nn
-import torch.nn.functional as F
+from torch import Tensor
 from einops import rearrange, repeat
-from einops.layers.torch import Rearrange
-from collections import namedtuple
+import torchvision.models as models
+from torchvision.models import ResNet18_Weights
 
-from mmpretrain.models.backbones.resnet import ResNet
-from mmpretrain.registry import MODELS
-import torch
-
-from mmengine import load, build_model_from_cfg 
-from mmengine.config import Config
-from mmengine.runner import load_checkpoint
-from torch import nn
-
-from dropblock import DropBlock2D, LinearScheduler
 
 class Resnet(nn.Module):
-
-    def __init__(self, cfg, ckpt, drop_prob=0.1, *args, **kwargs) -> None:
+    def __init__(self, drop_prob=0.1, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        cfg = Config.fromfile(cfg)
-        model = build_model_from_cfg(cfg.model, MODELS)
-        load_checkpoint(model, ckpt)
-        self.resnet = model.backbone
-        self.dropout = LinearScheduler(
-            DropBlock2D(block_size=2, drop_prob=0.),
-            start_value= 0.,
-            stop_value=drop_prob,
-            nr_steps=len(self.resnet.res_layers)
-        )
-        self.gap = model.neck
-    
+        self.resnet = models.resnet18(weights=ResNet18_Weights.DEFAULT)
+        self.dropout = nn.Dropout2d(drop_prob)
+
     def forward(self, x):
         T = int(x.size(2))
-        x = rearrange(x, 'n c t h w -> (n t) c h w')
-        x = self.resnet_forward(x)
-        x = self.gap(x)[-1]
-        x = rearrange(x, '(n t) c -> n c t', t=T)
-        return x 
+        x = rearrange(x, "n c t h w -> (n t) c h w")
+        x = self._forward_impl(x)
+        x = rearrange(x, "(n t) c -> n c t", t=T)
+        return x
 
-    def resnet_forward(self, x):
-        if self.resnet.deep_stem:
-            x = self.resnet.stem(x)
-        else:
-            x = self.resnet.conv1(x)
-            x = self.resnet.norm1(x)
-            x = self.resnet.relu(x)
+    def _forward_impl(self, x: Tensor) -> Tensor:
+        # See note [TorchScript super()]
+        x = self.resnet.conv1(x)
+        x = self.resnet.bn1(x)
+        x = self.resnet.relu(x)
         x = self.resnet.maxpool(x)
-        outs = []
-        for i, layer_name in enumerate(self.resnet.res_layers):
-            self.dropout.step()
-            res_layer = getattr(self.resnet, layer_name)
-            x = res_layer(x)
-            x = self.dropout(x)
 
-            if i in self.resnet.out_indices:
-                outs.append(x)
-        return tuple(outs)
+        x = self.resnet.layer1(x)
+        x = self.resnet.layer2(x)
+        x = self.resnet.layer3(x)
+        x = self.resnet.layer4(x)
+        x = self.dropout(x)
+
+        x = self.resnet.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.resnet.fc(x)
+
+        return x
+
+
+if __name__ == "__main__":
+    model = Resnet()
+    x = torch.randn(2, 3, 10, 224, 224)
+    print(model(x).shape)

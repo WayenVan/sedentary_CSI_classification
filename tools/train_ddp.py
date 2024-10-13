@@ -133,6 +133,7 @@ def cleanup():
 def build_model_and_data(cfg):
     #initialize data 
     file_list = os.listdir(cfg.data_root)
+    print(file_list)
     train_list, test_list = random_split_data_list(file_list, cfg.val_ratio)
 
     train_set = instantiate(cfg.data.dataset.train, data_list=train_list)

@@ -52,7 +52,21 @@ def random_split_data_list(data_list: list, test_ratio):
     test_size = round(len(data_list)*test_ratio)
     train_size = len(data_list) - test_size
     train_list = data_list[:train_size]
+    print(train_list)
+    print("\n")
     test_list = data_list[train_size:]
+    print(test_list)  
+    return train_list, test_list
+
+def fixed_split_data_list(data_list: list, test_ratio):
+    #shuffle(data_list)
+    test_size = round(len(data_list)*test_ratio)
+    train_size = len(data_list) - test_size
+    train_list = data_list[:train_size]
+    print(train_list)
+    print("\n")
+    test_list = data_list[train_size:]
+    print(test_list)    
     return train_list, test_list
 
 def parse_catm_file_name(file_name: str) -> Tuple[int, int, int, int]:
